@@ -12,3 +12,7 @@ env.bak/
 venv.bak/
 
 __pypackages__/
+__pycache__
+.__pycache__
+.vscode
+data/
