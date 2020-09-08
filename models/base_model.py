@@ -45,7 +45,7 @@ class BaseModel(nn.Module):
         n_total = 0
         for l_block in self.modules():
             if  isinstance(l_block, PrunableBatchNorm2d):
-              n_rem += self.n_remaining(l_block)
+              n_rem += self.n_remaining(l_block, steepness)
               n_total += l_block.num_gates
         return n_rem/n_total
 

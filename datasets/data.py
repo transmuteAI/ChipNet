@@ -71,7 +71,7 @@ class DataManager:
                                        sampler=train_sampler, pin_memory=True)
         val_loader = data.DataLoader(valset, self.batch_size, num_workers=self.workers, sampler=val_sampler,
                                      pin_memory=True)
-        test_loader = data.DataLoader(testset, self.batch_size, num_workers=self.workers, sampler=val_sampler,
+        test_loader = data.DataLoader(testset, self.batch_size, num_workers=self.workers, shuffle=False,
                                      pin_memory=False)
         return train_loader, val_loader, test_loader
 
