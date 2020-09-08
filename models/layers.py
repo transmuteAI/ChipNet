@@ -1,29 +1,25 @@
 import torch
 import torch.nn as nn
 
+
 class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
-    def __init__(self, num_features, conv_module=None, beta=None, gamma = None):
+    def __init__(self, num_features, conv_module=None):
         super(PrunableBatchNorm2d, self).__init__(num_features=num_features)
-        self.isimp = False
+        self.is_imp = False
+        self.is_pruned = False
         self.num_gates = num_features
         self.zeta = nn.Parameter(torch.rand(num_features) * 0.01)
-
-        beta, gamma = 1., 2.
+        self.pruned_zeta = torch.ones_like(self.zeta)
+        beta=1.
+        gamma=2.
         for n, x in zip(('beta', 'gamma'), (torch.tensor([x], requires_grad=False) for x in (beta, gamma))):
             self.register_buffer(n, x)  # self.beta will be created (same for gamma, zeta)        
-
-        # Add forward hook to conv that stores the output size
-        def save_output_size(module, in_tensor, out_tensor):
-            module.output_area = out_tensor.size(2) * out_tensor.size(3)
-
-        conv_module.register_forward_hook(save_output_size)
     
     def forward(self, input):
         out = super(PrunableBatchNorm2d, self).forward(input)
-        z = self.get_zeta_t()
+        z = self.pruned_zeta if pruned else self.get_zeta_t()
         out *= z[None, :, None, None] # broadcast the mask to all samples in the batch, and all locations
         return out
-
     
     def get_zeta_i(self):
         return self.__generalized_logistic(self.zeta)
@@ -32,18 +28,24 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         zeta_i = self.get_zeta_i()
         return self.__continous_heavy_side(zeta_i)
 
-    def set_beta_gamma(self, beta, gamma, device):
-        self.beta=torch.FloatTensor([beta]).to(device)
-        self.gamma=torch.FloatTensor([gamma]).to(device)
+    def set_beta_gamma(self, beta, gamma):
+        self.beta.data.copy_(torch.Tensor([beta]))
+        self.gamma.data.copy_(torch.Tensor([gamma]))
       
     def __generalized_logistic(self, x):
         return 1./(1.+torch.exp(-self.beta*x))
     
     def __continous_heavy_side(self, x):
-        return 1-torch.exp(-self.gamma*(x))+(x)*torch.exp(-self.gamma)
+        return 1-torch.exp(-self.gamma*x)+x*torch.exp(-self.gamma)
     
-    def get_grads(self):
-        return self.zeta.grad
+    def prune(self, threshold):
+        self.is_pruned = True
+        self.pruned_zeta = (self.get_zeta_t()>threshold).long()
+        self.zeta.requires_grad = False
+
+    def unprune():
+        self.is_pruned = False
+        self.zeta.requires_grad = True
 
     @staticmethod
     def from_batchnorm(bn_module, conv_module):
@@ -51,13 +53,12 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         return new_bn, conv_module
 
 
-
 class ModuleInjection:
     pruning_method = 'full'
     prunable_modules = []
 
     @staticmethod
-    def make_prunable(conv_module: nn.Conv2d, bn_module: nn.BatchNorm2d, beta = None, gamma = None):
+    def make_prunable(conv_module: nn.Conv2d, bn_module: nn.BatchNorm2d):
         """Make a (conv, bn) sequence prunable.
         :param conv_module: A Conv2d module
         :param bn_module: The BatchNorm2d module following the Conv2d above
