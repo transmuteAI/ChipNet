@@ -1,11 +1,6 @@
 import torch
 import torch.nn as nn
 
-class SparseConfig(object):
-    beta_init = 1. ## KEEP FLOAT
-    gamma_init = 2. ## KEEP FLOAT
-
-
 class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
     def __init__(self, num_features, conv_module=None, beta=None, gamma = None):
         super(PrunableBatchNorm2d, self).__init__(num_features=num_features)
@@ -13,7 +8,7 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         self.num_gates = num_features
         self.zeta = nn.Parameter(torch.rand(num_features) * 0.01)
 
-        beta, gamma = SparseConfig.beta_init, SparseConfig.gamma_init
+        beta, gamma = 1., 2.
         for n, x in zip(('beta', 'gamma'), (torch.tensor([x], requires_grad=False) for x in (beta, gamma))):
             self.register_buffer(n, x)  # self.beta will be created (same for gamma, zeta)        
 
