@@ -2,14 +2,13 @@ import math
 import torch
 import torch.nn as nn
 from .layers import ModuleInjection, PrunableBatchNorm2d
-from .super_model import SuperModel
+from .base_model import BaseModel
 
 
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
-
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -86,11 +85,11 @@ class Bottleneck(nn.Module):
 
         return out
 
-class ResNetCifar(SuperModel):
+class WideResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000):
+        super(WideResNet, self).__init__()
         self.prunable_modules = []
         self.inplanes = 16
-        super(ResNetCifar, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
@@ -108,14 +107,13 @@ class ResNetCifar(SuperModel):
             for b in l_blocks.children():
                 downs = next(b.downsample.children()) if b.downsample is not None else None
 
-
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             conv_module = nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False)
             bn_module = nn.BatchNorm2d(planes * block.expansion)
-            if hasattr(bn_module, 'isimp'):
-                bn_module.isimp = True
+            if hasattr(bn_module, 'is_imp'):
+                bn_module.is_imp = True
             downsample = nn.Sequential(*ModuleInjection.make_prunable(conv_module, bn_module))
 
         layers = []
@@ -142,44 +140,32 @@ class ResNetCifar(SuperModel):
         return x
 
     def removable_orphans(self):
-
-        def n_remaining(m):
-            return (m.get_zeta_t()==1.).sum()
-
-        def is_all_pruned(m):
-            return (n_remaining(m)) == 0
         num_removed = 0
         for l_blocks in [self.layer1, self.layer2, self.layer3]:
             for b in l_blocks:
                 m1, m2 = b.bn1, b.bn2
-                if is_all_pruned(m1) or is_all_pruned(m2):
-                    num_removed += n_remaining(m1) + n_remaining(m2)
+                if self.is_all_pruned(m1) or self.is_all_pruned(m2):
+                    num_removed += self.n_remaining(m1) + self.n_remaining(m2)
         return num_removed
 
     def remove_orphans(self):
-
-        def n_remaining(m):
-            return (m.get_zeta_t()==1.).sum()
-
-        def is_all_pruned(m):
-            return (n_remaining(m)) == 0
         num_removed = 0
         for l_blocks in [self.layer1, self.layer2, self.layer3]:
             for b in l_blocks:
                 m1, m2 = b.bn1, b.bn2
-                if is_all_pruned(m1) or is_all_pruned(m2):
-                    num_removed += n_remaining(m1) + n_remaining(m2)
-                    m1.zeta.data = (torch.ones_like(m1.zeta)*(-100000)).to(self.device)
-                    m2.zeta.data = (torch.ones_like(m2.zeta)*(-100000)).to(self.device)
+                if self.is_all_pruned(m1) or self.is_all_pruned(m2):
+                    num_removed += self.n_remaining(m1) + self.n_remaining(m2)
+                    m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
+                    m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
         return num_removed
     
-class ResNet(SuperModel):
+class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True):
+        super(ResNet, self).__init__()
         self.prunable_modules = []
         self.frozen = []
         self.produce_vectors = produce_vectors
         self.inplanes = 64
-        super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
@@ -199,23 +185,13 @@ class ResNet(SuperModel):
             for b in l.children():
                 downs = next(b.downsample.children()) if b.downsample is not None else None
 
-
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             conv_module = nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False)
             bn_module = nn.BatchNorm2d(planes * block.expansion)
-            if hasattr(bn_module, 'isimp'):
-                bn_module.isimp = True
+            if hasattr(bn_module, 'is_imp'):
+                bn_module.is_imp = True
             downsample = nn.Sequential(*ModuleInjection.make_prunable(conv_module, bn_module))
 
         layers = []
@@ -247,42 +223,30 @@ class ResNet(SuperModel):
             return x
 
     def removable_orphans(self):
-
-        def n_remaining(m):
-            return (m.get_zeta_t()==1.).sum()
-
-        def is_all_pruned(m):
-            return (n_remaining(m)) == 0
         num_removed = 0
         for l_blocks in [self.layer1, self.layer2, self.layer3, self.layer4]:
             for b in l_blocks:
                 m1, m2, m3 = b.bn1, b.bn2, b.bn3
-                if is_all_pruned(m1) or is_all_pruned(m2) or is_all_pruned(m3):
-                    num_removed += n_remaining(m1) + n_remaining(m2) + n_remaining(m3)
+                if self.is_all_pruned(m1) or self.is_all_pruned(m2) or self.is_all_pruned(m3):
+                    num_removed += self.n_remaining(m1) + self.n_remaining(m2) + self.n_remaining(m3)
         return num_removed
 
     def remove_orphans(self):
-
-        def n_remaining(m):
-            return (m.get_zeta_t()==1.).sum()
-
-        def is_all_pruned(m):
-            return (n_remaining(m)) == 0
         num_removed = 0
         for l_blocks in [self.layer1, self.layer2, self.layer3, self.layer4]:
             for b in l_blocks:
                 m1, m2, m3 = b.bn1, b.bn2, b.bn3
-                if is_all_pruned(m1) or is_all_pruned(m2) or is_all_pruned(m3):
-                    num_removed += n_remaining(m1) + n_remaining(m2) + n_remaining(m3)
-                    m1.zeta.data = (torch.ones_like(m1.zeta)*(-100000)).to(self.device)
-                    m2.zeta.data = (torch.ones_like(m2.zeta)*(-100000)).to(self.device)
-                    m3.zeta.data = (torch.ones_like(m3.zeta)*(-100000)).to(self.device)
+                if self.is_all_pruned(m1) or self.is_all_pruned(m2) or self.is_all_pruned(m3):
+                    num_removed += self.n_remaining(m1) + self.n_remaining(m2) + self.n_remaining(m3)
+                    m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
+                    m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
+                    m3.pruned_zeta.data.copy_(torch.zeros_like(m3.pruned_zeta))
         return num_removed
+
 
 def make_wide_resnet(num_classes):
     model = ResNetCifar(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes)
     return model
-
 
 def make_resnet50(num_classes):
     model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes)
@@ -296,7 +260,7 @@ def make_resnet152(num_classes):
     model = ResNet(Bottleneck, [3, 8, 36, 3], num_classes=num_classes)
     return model
 
-def get_model(model, method, num_classes):
+def get_resnet_model(model, method, num_classes):
     """Returns the requested model, ready for training/pruning with the specified method.
 
     :param model: str, either wrn or r50
@@ -305,14 +269,13 @@ def get_model(model, method, num_classes):
     :return: A prunable ResNet model
     """
     ModuleInjection.pruning_method = method
-
     if model == 'wrn':
         net = make_wide_resnet(num_classes)
-    if model == 'r50':
+    elif model == 'r50':
         net = make_resnet50(num_classes)
-    if model == 'r101':
+    elif model == 'r101':
         net = make_resnet101(num_classes)
-    if model == 'r152':
+    elif model == 'r152':
         net = make_resnet152(num_classes)
     net.prunable_modules = ModuleInjection.prunable_modules
     return net

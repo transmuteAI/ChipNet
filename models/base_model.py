@@ -9,15 +9,19 @@ class BaseModel(nn.Module):
     
     def set_threshold(self, threshold):
         self.prune_threshold = threshold
-    
+        
     def init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
 
     def calculate_prune_threshold(self, Vc):
         zetas = self.give_zetas()
@@ -27,16 +31,20 @@ class BaseModel(nn.Module):
     
     def smoothRound(self, x, steepness=20.):
         return 1./(1.+torch.exp(-1*steepness*(x-0.5)))
-
+    
+    def n_remaining(self, m):
+        return (m.pruned_zeta if m.is_pruned else self.smoothRound(m.get_zeta_t(), steepness)).sum()
+    
+    def is_all_pruned(self, m):
+        return self.n_remaining(m) == 0
+    
     def get_remaining(self, steepness=20.):
-        """return the fraction of active zeta_t (i.e > 0.5)"""
-        def n_remaining(m):
-            return (m.pruned_zeta if m.is_pruned else self.smoothRound(m.get_zeta_t(), steepness)).sum()  
+        """return the fraction of active zeta_t (i.e > 0.5)""" 
         n_rem = 0
         n_total = 0
         for l_block in self.modules():
             if  isinstance(l_block, PrunableBatchNorm2d):
-              n_rem += n_remaining(l_block)
+              n_rem += self.n_remaining(l_block)
               n_total += l_block.num_gates
         return n_rem/n_total
 
@@ -63,7 +71,7 @@ class BaseModel(nn.Module):
         for l_block in self.modules():
             if isinstance(l_block, PrunableBatchNorm2d):
                 loss = torch.cat([loss, torch.pow(l_block.get_zeta_t()-l_block.get_zeta_i(), 2)])
-        return torch.mean(loss)
+        return torch.mean(loss).to(device)
 
     def prune(self, Vc, finetuning=False, threshold=None):
         """prunes the network to make zeta_t exactly 1 and 0"""
@@ -99,10 +107,10 @@ class BaseModel(nn.Module):
 
         return threshold            
           
-    def set_beta_gamma(self, beta, gamma, device):
+    def set_beta_gamma(self, beta, gamma):
         for l_block in self.modules():
             if isinstance(l_block, PrunableBatchNorm2d):
-                l_block.set_beta_gamma(beta, gamma, device)
+                l_block.set_beta_gamma(beta, gamma)
     
     def check_abnormality(self):
         n_removable = self.removable_orphans()

@@ -1,27 +1,17 @@
 import argparse
-import glob
 import os
-import sys
-
 
 import torch
-import torchvision
-import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from datasets import data
+from datasets import DataManager
 from tqdm import tqdm as tqdm_notebook
-import random 
-import os
 from utils import *
-from models import resnet
+from models import get_model
 
 seed_everything(43)
-
 
 ap = argparse.ArgumentParser(description='pretraining')
 ap.add_argument('dataset', choices=['c10', 'c100'], type=str, help='Dataset choice')
@@ -37,7 +27,7 @@ args = ap.parse_args()
 
 ############################### preparing dataset ################################
 
-data_object = data.DataManager(args)
+data_object = DataManager(args)
 trainloader, valloader, testloader = data_object.prepare_data()
 dataloaders = {
         'train': trainloader, 'val': valloader, "test": testloader
@@ -45,10 +35,10 @@ dataloaders = {
 
 ############################### preparing model ###################################
 
-model = resnet.get_model(args.model,'full',data_object.num_classes)
+model = get_model(args.model, 'full', data_object.num_classes)
 
-        
 ############################## preparing for training #############################
+
 if os.path.exists('logs') == False:
     os.mkdir("logs")
 
@@ -60,10 +50,10 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.001)
 
 device = torch.device(f"cuda:{str(args.cuda_id)}")
+
 model.to(device)
 
-
-def train(model, loss_fn, optimizer,scheduler=None):
+def train(model, loss_fn, optimizer, scheduler=None):
     model.train()
     counter = 0
     tk1 = tqdm_notebook(dataloaders['train'], total=len(dataloaders['train']))
@@ -76,13 +66,13 @@ def train(model, loss_fn, optimizer,scheduler=None):
 
         loss = loss_fn(scores, y_var)
         running_loss+=loss.item()
-        tk1.set_postfix(loss=(running_loss /counter))
+        tk1.set_postfix(loss=running_loss/counter)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-    return (running_loss/counter)     
+    return running_loss/counter
 
-def test(model, loss_fn, optimizer, phase,scheduler=None):
+def test(model, loss_fn, optimizer, phase, scheduler=None):
     model.eval()
     counter = 0
     tk1 = tqdm_notebook(dataloaders[phase], total=len(dataloaders[phase]))
@@ -103,18 +93,18 @@ def test(model, loss_fn, optimizer, phase,scheduler=None):
             correct = (scores == y_var).sum().item()
             running_loss+=loss.item()
             running_acc+=correct
-            total += scores.shape[0]
-            tk1.set_postfix(loss=(running_loss /counter), acc=(running_acc/total))
-    return (running_acc/total), (running_loss/counter)
+            total+=scores.shape[0]
+            tk1.set_postfix(loss=running_loss/counter, acc=running_acc/total)
+    return running_acc/total, running_loss/counter
 
 ###################################### training starts here ############################
 
-best_acc=0
+best_acc = 0
 num_epochs = args.epochs
 train_losses = []
-val_losses = []
-val_acc = []
-if(args.test_only == False):
+valid_losses = []
+valid_accuracy = []
+if args.test_only == False:
     for epoch in range(num_epochs):
         adjust_learning_rate(optimizer, epoch)
         print('Starting epoch %d / %d' % (epoch + 1, num_epochs))
@@ -128,16 +118,16 @@ if(args.test_only == False):
                 "epoch": epoch + 1,
                 "state_dict" : model.state_dict(),
                 "acc" : best_acc,
-            }, f"checkpoints/{args.model+args.dataset}_pretrained.pth")
+            }, f"checkpoints/{args.model+"_"+args.dataset}_pretrained.pth")
 
         train_losses.append(t_loss)
-        val_losses.append(v_loss)
-        val_acc.append(acc)
-        df_data=np.array([train_losses,val_losses,val_acc]).T
-        df = pd.DataFrame(df_data,columns = ['train_losses','val_losses','val_acc'])
-        df.to_csv(f'logs/{args.model+args.dataset}_pretrained.csv')
-else:
-    state = torch.load(f"models/{args.model+args.dataset}_pretrained.pth")
-    model.load_state_dict(state['state_dict'],strict=True)
-    acc, v_loss = test(model, criterion, optimizer, "test")
-    print(f"test acc: {acc} | val_best_acc: {state['acc']}")          
+        valid_losses.append(v_loss)
+        valid_accuracy.append(acc)
+        df_data=np.array([train_losses, valid_losses, valid_accuracy]).T
+        df = pd.DataFrame(df_data, columns = ['train_losses','valid_losses','valid_accuracy'])
+        df.to_csv(f'logs/{args.model+"_"+args.dataset}_pretrained.csv')
+
+state = torch.load(f"checkpoints/{args.model+"_"+args.dataset}_pretrained.pth")
+model.load_state_dict(state['state_dict'],strict=True)
+acc, v_loss = test(model, criterion, optimizer, "test")
+print(f"test acc: {acc} | val_best_acc: {state['acc']}")          
