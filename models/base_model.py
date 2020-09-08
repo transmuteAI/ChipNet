@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from layers import PrunableBatchNorm2d
 
 class BaseModel(nn.Module):
     def __init__(self):
@@ -32,7 +33,7 @@ class BaseModel(nn.Module):
     def smoothRound(self, x, steepness=20.):
         return 1./(1.+torch.exp(-1*steepness*(x-0.5)))
     
-    def n_remaining(self, m):
+    def n_remaining(self, m, steepness=20.):
         return (m.pruned_zeta if m.is_pruned else self.smoothRound(m.get_zeta_t(), steepness)).sum()
     
     def is_all_pruned(self, m):
@@ -90,7 +91,7 @@ class BaseModel(nn.Module):
             problem = self.check_abnormality()
             return threshold, problem
 
-    def unprune():
+    def unprune(self):
         for l_block in self.modules():
             if isinstance(l_block, PrunableBatchNorm2d):
                 l_block.unprune()

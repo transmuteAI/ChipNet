@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import torch.nn as nn
 import torch.optim as optim
-from datasets import DataManager
 from tqdm import tqdm as tqdm_notebook
+from datasets import DataManager
 from utils import *
 from models import get_model
 
@@ -118,16 +118,16 @@ if args.test_only == False:
                 "epoch": epoch + 1,
                 "state_dict" : model.state_dict(),
                 "acc" : best_acc,
-            }, f"checkpoints/{args.model+"_"+args.dataset}_pretrained.pth")
+            }, f"checkpoints/{args.model}_{args.dataset}_pretrained.pth")
 
         train_losses.append(t_loss)
         valid_losses.append(v_loss)
         valid_accuracy.append(acc)
         df_data=np.array([train_losses, valid_losses, valid_accuracy]).T
         df = pd.DataFrame(df_data, columns = ['train_losses','valid_losses','valid_accuracy'])
-        df.to_csv(f'logs/{args.model+"_"+args.dataset}_pretrained.csv')
+        df.to_csv(f'logs/{args.model}_{args.dataset}_pretrained.csv')
 
-state = torch.load(f"checkpoints/{args.model+"_"+args.dataset}_pretrained.pth")
+state = torch.load(f"checkpoints/{args.model}_{args.dataset}_pretrained.pth")
 model.load_state_dict(state['state_dict'],strict=True)
 acc, v_loss = test(model, criterion, optimizer, "test")
 print(f"test acc: {acc} | val_best_acc: {state['acc']}")          

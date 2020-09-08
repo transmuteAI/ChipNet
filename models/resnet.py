@@ -245,7 +245,7 @@ class ResNet(BaseModel):
 
 
 def make_wide_resnet(num_classes):
-    model = ResNetCifar(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes)
+    model = WideResNet(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes)
     return model
 
 def make_resnet50(num_classes):
