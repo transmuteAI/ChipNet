@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from layers import PrunableBatchNorm2d
+from .layers import PrunableBatchNorm2d
 
 class BaseModel(nn.Module):
     def __init__(self):

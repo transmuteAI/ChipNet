@@ -10,7 +10,7 @@ from tqdm import tqdm as tqdm_notebook
 
 from utils import *
 from models import get_model
-from data import DataManager
+from datasets import DataManager
 
 seed_everything(43)
 
@@ -49,7 +49,7 @@ dataloaders = {
 ############################### preparing model ###################################
 
 model = get_model(args.model, 'prune', data_object.num_classes)
-state = torch.load(f"checkpoints/{args.model+"_"+args.dataset}_pretrained.pth")
+state = torch.load(f"checkpoints/{args.model}_{args.dataset}_pretrained.pth")
 model.load_state_dict(state['state_dict'], strict=False)
 
 ############################### preparing for pruning ###################################
@@ -96,7 +96,7 @@ def train(model, loss_fn, optimizer, epoch):
         x_var = x_var.to(device=device)
         y_var = y_var.to(device=device)
         scores = model(x_var)
-        loss = loss_fn(model,scores, y_var,epoch)
+        loss = loss_fn(model,scores, y_var)
         optimizer.zero_grad()
         loss.backward()
         running_loss+=loss.item()
@@ -118,7 +118,7 @@ def test(model, loss_fn, optimizer, phase, epoch):
             x_var = x_var.to(device=device)
             y_var = y_var.to(device=device)
             scores = model(x_var)
-            loss = loss_fn(model,scores, y_var,epoch)
+            loss = loss_fn(model,scores, y_var)
             _, scores = torch.max(scores.data, 1)
             y_var = y_var.cpu().detach().numpy()
             scores = scores.cpu().detach().numpy()
@@ -145,10 +145,10 @@ problems = []
 name = f'{args.model}_{args.dataset}_{str(Vc.item())}_pruned'
 if args.test_only == False:
     for epoch in range(args.epochs):
-        print(f'Starting epoch {epoch + 1} / {num_epochs}')
+        print(f'Starting epoch {epoch + 1} / {args.epochs}')
         model.unprune()
         train(model, criterion, optimizer, epoch)
-        print(f'[{epoch + 1} / {num_epochs}] Validation before pruning')
+        print(f'[{epoch + 1} / {args.epochs}] Validation before pruning')
         acc = test(model, criterion, optimizer, "val", epoch)
         remaining = model.get_remaining(steepness).item()
         remaining_before_pruning.append(remaining)
@@ -157,7 +157,7 @@ if args.test_only == False:
         # exact_zeros.append(exactly_zeros)
         # exact_ones.append(exactly_ones)
         
-        print(f'[{epoch + 1} / {num_epochs}] Validation after pruning')
+        print(f'[{epoch + 1} / {args.epochs}] Validation after pruning')
         threshold, problem = model.prune(args.Vc)
         acc = test(model, criterion, optimizer, "val", epoch)
         remaining = model.get_remaining().item()

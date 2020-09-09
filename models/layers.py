@@ -17,7 +17,7 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
     
     def forward(self, input):
         out = super(PrunableBatchNorm2d, self).forward(input)
-        z = self.pruned_zeta if pruned else self.get_zeta_t()
+        z = self.pruned_zeta if self.is_pruned else self.get_zeta_t()
         out *= z[None, :, None, None] # broadcast the mask to all samples in the batch, and all locations
         return out
     
@@ -43,7 +43,7 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         self.pruned_zeta = (self.get_zeta_t()>threshold).long()
         self.zeta.requires_grad = False
 
-    def unprune():
+    def unprune(self):
         self.is_pruned = False
         self.zeta.requires_grad = True
 
