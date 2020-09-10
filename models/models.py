@@ -12,6 +12,7 @@ def get_model(model, method, num_classes):
 
     if model in ['wrn', 'r50', 'r101', 'r152']:
         net = get_resnet_model(model, method, num_classes)
-   
+    else:
+        net = get_vgg_model(model, method, num_classes)
     net.prunable_modules = ModuleInjection.prunable_modules
     return net

@@ -85,13 +85,13 @@ def get_vgg_model(model, method, num_classes):
     :return: A prunable ResNet model
     """
     ModuleInjection.pruning_method = method
-    if model == 'VGG11':
+    if model == 'vgg11':
         net = make_vgg11_bn(num_classes)
-    elif model == 'VGG13':
+    elif model == 'vgg13':
         net = make_vgg13_bn(num_classes)
-    elif model == 'VGG16':
+    elif model == 'vgg16':
         net = make_vgg16_bn(num_classes)
-    elif model == 'VGG19':
+    elif model == 'vgg19':
         net = make_vgg19_bn(num_classes)
     net.prunable_modules = ModuleInjection.prunable_modules
     return net
