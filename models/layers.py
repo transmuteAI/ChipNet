@@ -11,7 +11,7 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         self.zeta = nn.Parameter(torch.rand(num_features) * 0.01)
         self.pruned_zeta = torch.ones_like(self.zeta)
         def save_input_active_channels_count(module, in_tensor, out_tensor):
-            module.num_input_active_channels = (input_tensor.sum(1)>0).sum()
+            module.num_input_active_channels = (in_tensor[0].sum((0,2,3))>0).sum().item()
         conv_module.register_forward_hook(save_input_active_channels_count)
         self._conv_module = conv_module
         beta=1.
@@ -51,11 +51,11 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         self.is_pruned = False
         self.zeta.requires_grad = True
 
-    def get_num_params(self):
+    def get_params_count(self):
         total_conv_params = self._conv_module.in_channels*self.pruned_zeta.shape[0]*self._conv_module.kernel_size[0]*self._conv_module.kernel_size[1]
         bn_params = self.num_gates*3
-        active_conv_params = self._conv_module.num_input_active_channels*self.pruned_zeta.sum()*self._conv_module.kernel_size[0]*self._conv_module.kernel_size[1]
-        return active_params.item()+bn_params, total_params.item()+bn_params
+        active_conv_params = self._conv_module.num_input_active_channels*self.pruned_zeta.sum().item()*self._conv_module.kernel_size[0]*self._conv_module.kernel_size[1]
+        return active_conv_params+bn_params, total_conv_params+bn_params
 
     @staticmethod
     def from_batchnorm(bn_module, conv_module):
