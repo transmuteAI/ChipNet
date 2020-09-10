@@ -1,11 +1,19 @@
 from torch.utils.data import Dataset
 import glob
 import numpy as np
+import os
 from torchvision.datasets.folder import pil_loader
+from torchvision.datasets.utils import download_and_extract_archive
 
 class TinyImageNet(Dataset):
-    def __init__(self, root, train, transforms):
-        self.root = root+"tiny-imagenet-200/"
+    def __init__(self, root, train, transforms, download=True):
+
+        self.url = "http://cs231n.stanford.edu/tiny-imagenet-200"
+        self.root = root
+        if download:
+            download_and_extract_archive(self.url, root, filename="tiny-imagenet-200.zip")
+
+        self.root = os.path.join(self.root, "tiny-imagenet-200")
         self.train = train
         self.transforms = transforms
         self.ids_string = np.sort(np.loadtxt(f"{self.root}/wnids.txt", "str"))

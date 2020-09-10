@@ -48,7 +48,6 @@ class DataManager:
             norm_mean = [0.485, 0.456, 0.406]
             norm_std = [0.229, 0.224, 0.225]
             norm_transform = transforms.Normalize(norm_mean, norm_std)
-            insize = 64
             train_transform = transforms.Compose([
                 transforms.RandomAffine(degrees=20.0, scale=(0.8, 1.2), shear=20.0),
                 transforms.RandomHorizontalFlip(),
