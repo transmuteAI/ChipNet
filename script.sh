@@ -8,4 +8,4 @@ read budget
 
 python pretraining.py $dataset $model --epochs 300
 python pruning.py dataset model --budget $budget
-python finetuning --name $model_$dataset_$budget --epochs 300 
+python finetuning --name $model\_$dataset\_$budget --epochs 300 
