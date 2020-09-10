@@ -71,14 +71,15 @@ def plot_learning_curves(logger_name):
     plt.show()
     print()
 
-def visualize_model_architecture(model):
+def visualize_model_architecture(model, budget):
     pruned_model = [3,]
     full_model = [3,]
+    model.prepare_for_finetuning(budget)
     for l_block in model.modules():
         if hasattr(l_block, 'zeta'):
-            zeta = l_block.get_zeta_t().cpu().detach().numpy().tolist()
-            full_model.append(len(zeta))
-            pruned_model.append(np.sum(zeta))
+            gates = l_block.pruned_zeta().cpu().detach().numpy().tolist()
+            full_model.append(len(gates))
+            pruned_model.append(np.sum(gates))
     fig = plt.figure()
     ax = fig.add_axes([0,0,1,1])
     full_model = np.array(full_model)
@@ -88,6 +89,11 @@ def visualize_model_architecture(model):
     print(full_model)
     print(pruned_model)
     plt.show()
+    active_params, total_params = model.get_params_count()
+    
+    print(f'Total parameter count: {total_params}')
+    print(f'Remaining parameter count: {active_params}')
+    print(f'Remaining Parameter Fraction: {active_params/total_params}')
     return [full_model, pruned_model]
 
         
