@@ -56,7 +56,7 @@ def visualize_model_architecture(model, budget):
     model.prepare_for_finetuning(budget)
     for l_block in model.modules():
         if hasattr(l_block, 'zeta'):
-            gates = l_block.pruned_zeta().cpu().detach().numpy().tolist()
+            gates = l_block.pruned_zeta.cpu().detach().numpy().tolist()
             full_model.append(len(gates))
             pruned_model.append(np.sum(gates))
     fig = plt.figure()
