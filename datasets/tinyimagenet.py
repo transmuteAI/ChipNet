@@ -26,10 +26,10 @@ class TinyImageNet(Dataset):
             self.paths = [f"{self.root}/val/images/{sample[0]}" for sample in self.val_annotations]
             self.label = [self.ids[sample[1]] for sample in self.val_annotations]
 
-    self __len__(self):
+    def __len__(self):
         return len(self.paths)
 
-    self __getitem__(self, idx):
+    def __getitem__(self, idx):
         image = pil_loader(self.paths[idx])
 
         if self.transforms is not None:
