@@ -6,7 +6,7 @@ from torchvision.datasets.folder import pil_loader
 from torchvision.datasets.utils import download_and_extract_archive
 
 class TinyImageNet(Dataset):
-    def __init__(self, root, train, transforms, download=True):
+    def __init__(self, root, train, transform, download=True):
 
         self.url = "http://cs231n.stanford.edu/tiny-imagenet-200"
         self.root = root
@@ -15,7 +15,7 @@ class TinyImageNet(Dataset):
 
         self.root = os.path.join(self.root, "tiny-imagenet-200")
         self.train = train
-        self.transforms = transforms
+        self.transform = transform
         self.ids_string = np.sort(np.loadtxt(f"{self.root}/wnids.txt", "str"))
         self.ids = {class_string: i for i, class_string in enumerate(self.ids_string)}
         if train:
@@ -32,8 +32,8 @@ class TinyImageNet(Dataset):
     def __getitem__(self, idx):
         image = pil_loader(self.paths[idx])
 
-        if self.transforms is not None:
-            image = self.transforms(image)
+        if self.transform is not None:
+            image = self.transform(image)
 
         return image, self.label[idx]
         
