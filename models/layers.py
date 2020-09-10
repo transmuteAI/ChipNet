@@ -45,8 +45,8 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
     def prune(self, threshold):
         self.is_pruned = True
         self.pruned_zeta = (self.get_zeta_t()>threshold).float()
-        if self.is_imp and self.pruned_zeta.sum()==0:
-            self.pruned_zeta[torch.argmax(self.get_zeta_t()).item()] = 1.
+        # if self.is_imp and self.pruned_zeta.sum()==0:
+        #     self.pruned_zeta[torch.argmax(self.get_zeta_t()).item()] = 1.
         self.zeta.requires_grad = False
 
     def unprune(self):
