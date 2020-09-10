@@ -17,3 +17,4 @@ __pycache__
 .vscode
 data/
 pythonenv3.8
+*.ipynb

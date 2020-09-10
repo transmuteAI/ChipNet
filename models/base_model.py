@@ -45,8 +45,9 @@ class BaseModel(nn.Module):
         n_total = 0
         for l_block in self.modules():
             if  isinstance(l_block, PrunableBatchNorm2d):
-              n_rem += self.n_remaining(l_block, steepness)
-              n_total += l_block.num_gates
+                if(budget_type == 'cr'):
+                    n_rem += self.n_remaining(l_block, steepness) * 
+                    n_total += l_block.num_gates
         return n_rem/n_total
 
     def give_zetas(self):
@@ -114,8 +115,12 @@ class BaseModel(nn.Module):
         for l_block in self.modules():
             if isinstance(l_block, PrunableBatchNorm2d):
                 active_param, total_param = l_block.get_params_count()
-                total_params+=total_param
                 active_params+=active_param 
+                total_params+=total_param
+            if isinstance(l_block, nn.Linear):
+                linear_params = l_block.weight.view(-1).shape[0]
+                active_params+=linear_params
+                total_params+=linear_params
         return active_params, total_params
           
     def set_beta_gamma(self, beta, gamma):
