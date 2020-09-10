@@ -106,7 +106,17 @@ class BaseModel(nn.Module):
             threshold-=0.0001
             self.prune(budget, finetuning=True, threshold=threshold)
 
-        return threshold            
+        return threshold      
+
+    def get_params_count(self):
+        total_params = 0
+        active_params = 0
+        for l_block in self.modules():
+            if isinstance(l_block, PrunableBatchNorm2d):
+                active_param, total_param = l_block.get_params_count()
+                total_params+=total_param
+                active_params+=active_param 
+        return active_params, total_params
           
     def set_beta_gamma(self, beta, gamma):
         for l_block in self.modules():
