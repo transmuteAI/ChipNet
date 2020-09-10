@@ -46,7 +46,7 @@ class BaseModel(nn.Module):
         for l_block in self.modules():
             if  isinstance(l_block, PrunableBatchNorm2d):
                 if(budget_type == 'cr'):
-                    n_rem += self.n_remaining(l_block, steepness) * 
+                    n_rem += self.n_remaining(l_block, steepness)
                     n_total += l_block.num_gates
         return n_rem/n_total
 
@@ -97,11 +97,9 @@ class BaseModel(nn.Module):
             if isinstance(l_block, PrunableBatchNorm2d):
                 l_block.unprune()
     
-    def prepare_for_finetuning(self, beta, gamma, device, budget):
+    def prepare_for_finetuning(self, device, budget):
         """freezes zeta"""
         self.device = device
-        self.set_beta_gamma(beta, gamma)
-
         threshold = self.prune(budget, finetuning=True)
         while self.get_remaining()<budget:
             threshold-=0.0001
