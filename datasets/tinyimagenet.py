@@ -11,7 +11,10 @@ class TinyImageNet(Dataset):
         self.url = "http://cs231n.stanford.edu/tiny-imagenet-200"
         self.root = root
         if download:
-            download_and_extract_archive(self.url, root, filename="tiny-imagenet-200.zip")
+            if os.path.exists(f'{self.root}/tiny-imagenet-200/'):
+                print('File already downloaded')
+            else:
+                download_and_extract_archive(self.url, root, filename="tiny-imagenet-200.zip")
 
         self.root = os.path.join(self.root, "tiny-imagenet-200")
         self.train = train
