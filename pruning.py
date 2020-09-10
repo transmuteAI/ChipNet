@@ -63,7 +63,7 @@ if os.path.exists('checkpoints') == False:
 
 weightage1 = args.w1 #weightage given to budget loss
 weightage2 = args.w2 #weightage given to crispness loss
-steepness = 10. # steepness of gate_approximator
+steepness = 20. # steepness of gate_approximator
 
 CE = nn.CrossEntropyLoss()
 def criterion(model, y_pred, y_true):
@@ -77,7 +77,7 @@ param_optimizer = list(model.named_parameters())
 no_decay = ["zeta"]
 optimizer_parameters = [
         {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0,'lr':args.lr*0.1},
+        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0,'lr':args.lr},
     ]
 optimizer = optim.AdamW(optimizer_parameters)
 
@@ -102,7 +102,7 @@ def train(model, loss_fn, optimizer, epoch):
         running_loss+=loss.item()
         tk1.set_postfix(loss=running_loss/counter)
         optimizer.step()
-        steepness+=(10./len(tk1))
+#         steepness+=(10./len(tk1))
     return running_loss/counter
 
 def test(model, loss_fn, optimizer, phase, epoch):
