@@ -1,30 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-import torchvision
-import torchvision.transforms as transforms
 import os
 import random
 import pandas as pd
-
-def imshow(img):
-    img = img_denorm(img)
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    plt.show()
-    
-    
-def img_denorm(img):
-    #for ImageNet the mean and std are:
-    mean = np.asarray([ 0.485, 0.456, 0.406 ])
-    std = np.asarray([ 0.229, 0.224, 0.225 ])
-
-    denormalize = transforms.Normalize((-1 * mean / std), (1.0 / std))
-
-    res = img.squeeze(0)
-    res = denormalize(res)
-    res = torch.clamp(res, 0, 1)    
-    return(res)
 
 def seed_everything(seed):
     random.seed(seed)
