@@ -10,7 +10,7 @@ class VGG(BaseModel):
     def __init__(self, features, num_classes=1000):
         super(VGG, self).__init__()
         self.features = features
-        self.avgpool = nn.AdaptiveAvgPool2d()
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Linear(512, num_classes)
         self.init_weights()
 
