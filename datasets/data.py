@@ -5,7 +5,7 @@ import torch.utils.data as data
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import transforms, datasets
 from torchvision.datasets import CIFAR10, CIFAR100
-from .tinyimagenet import TinyImageNet, TinyImageNetVal
+from .tinyimagenet import TinyImageNet
 from sklearn.model_selection import train_test_split
 import numpy as np
 
@@ -59,9 +59,9 @@ class DataManager:
                 transforms.ToTensor(),
                 norm_transform
             ])
-            trainset = TinyImageNet('./data', transform=train_transform)
-            valset = TinyImageNet('./data', transform=val_transform)
-            testset = TinyImageNetVal('./data',transform=val_transform)
+            trainset = TinyImageNet('./data', train=True, transform=train_transform)
+            valset = TinyImageNet('./data', train=True, transform=val_transform)
+            testset = TinyImageNet('./data', train=False, transform=val_transform)
 
         self.num_train = len(trainset)
         train_idx, val_idx = self.get_split()
@@ -83,7 +83,7 @@ class DataManager:
         else:
             print('creating a split')
             indices = list(range(self.num_train))
-            train_idx, valid_idx = train_test_split(indices, test_size = self.valid_size)
+            train_idx, valid_idx = train_test_split(indices, test_size=self.valid_size)
             np.save(f'./{self.dataset_name}_train_idx.npy',train_idx)
             np.save(f'./{self.dataset_name}_valid_idx.npy',valid_idx)
         return train_idx, valid_idx
