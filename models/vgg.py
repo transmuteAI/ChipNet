@@ -45,7 +45,7 @@ def make_layers(cfg):
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             bn = nn.BatchNorm2d(v)
             conv2d, bn = ModuleInjection.make_prunable(conv2d, bn)
-            if hasattr(bn_module, 'is_imp'):
+            if hasattr(bn, 'is_imp'):
                 bn.is_imp = True
             layers += [conv2d, bn, nn.ReLU(inplace=True)]
             in_channels = v
