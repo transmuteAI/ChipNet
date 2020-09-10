@@ -130,4 +130,4 @@ if args.test_only == False:
 state = torch.load(f"checkpoints/{args.model}_{args.dataset}_pretrained.pth")
 model.load_state_dict(state['state_dict'],strict=True)
 acc, v_loss = test(model, criterion, optimizer, "test")
-print(f"test acc: {acc} | val_best_acc: {state['acc']}")          
+print(f"Test Accuracy: {acc} | Valid Accuracy: {state['acc']}")

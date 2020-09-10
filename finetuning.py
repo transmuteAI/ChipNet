@@ -46,19 +46,15 @@ dataloaders = {
 model = get_model(args.model, 'prune', data_object.num_classes)
         
 state = torch.load(model_path)
-model.load_state_dict(state['state_dict'],strict=False)
+model.load_state_dict(state['state_dict'], strict=False)
 
 CE = nn.CrossEntropyLoss()
-def loss(model, y_pred, y_true):
+def criterion(model, y_pred, y_true):
     ce_loss = CE(y_pred, y_true)
     return ce_loss
 
-criterion = loss
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.001)
 device = torch.device(f"cuda:{str(args.cuda_id)}")
-# if torch.cuda.device_count() > 1:
-#   print("Let's use", torch.cuda.device_count(), "GPUs!")
-#   model = nn.DataParallel(model)
 model.to(device)
 Vc.to(device)
 
@@ -72,13 +68,13 @@ def train(model, loss_fn, optimizer):
         x_var = x_var.to(device=device)
         y_var = y_var.to(device=device)
         scores = model(x_var)
-        loss = loss_fn(model,scores, y_var)
+        loss = loss_fn(model, scores, y_var)
         running_loss+=loss.item()
-        tk1.set_postfix(loss=(running_loss /counter))
+        tk1.set_postfix(loss=running_loss/counter)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-    return (running_loss/counter)        
+    return running_loss/counter        
 
 def test(model, loss_fn, optimizer, phase):
     model.eval()
@@ -93,7 +89,7 @@ def test(model, loss_fn, optimizer, phase):
             x_var = x_var.to(device=device)
             y_var = y_var.to(device=device)
             scores = model(x_var)
-            loss = loss_fn(model,scores, y_var)
+            loss = loss_fn(model, scores, y_var)
             _, scores = torch.max(scores.data, 1)
             y_var = y_var.cpu().detach().numpy()
             scores = scores.cpu().detach().numpy()
@@ -101,47 +97,45 @@ def test(model, loss_fn, optimizer, phase):
             correct = (scores == y_var).sum().item()
             running_loss+=loss.item()
             running_acc+=correct
-            total += scores.shape[0]
-            tk1.set_postfix(loss=(running_loss /counter), acc=(running_acc/total))
-    return (running_acc/total), (running_loss/counter)
+            total+=scores.shape[0]
+            tk1.set_postfix(loss=running_loss/counter, acc=running_acc/total)
+    return running_acc/total, running_loss/counter
 
 ############################## training starts here #############################
 
-beta, gamma = state['beta'], state['gamma']
-model.prepare_for_finetuning(beta,gamma,device,Vc.item()) # sets beta and gamma and unfreezes network except zetas
+model.prepare_for_finetuning(device, Vc.item()) # sets beta and gamma and unfreezes network except zetas
 
-best_acc=0
+best_accuracy=0
 num_epochs = args.epochs
 train_losses = []
-val_losses = []
-val_acc = []
-if(args.test_only == False):
+valid_losses = []
+valid_accuracy = []
+if args.test_only == False:
     for epoch in range(num_epochs):
         adjust_learning_rate(optimizer, epoch)
         print('Starting epoch %d / %d' % (epoch + 1, num_epochs))
-        t_loss = train(model, criterion, optimizer)
-        acc, v_loss = test(model, criterion, optimizer, "val")
-        rem = model.get_remaining().item()
-        print("Rem:",rem,"acc:",acc)
+        train_loss = train(model, criterion, optimizer)
+        accuracy, valid_loss = test(model, criterion, optimizer, "val")
+        remaining = model.get_remaining().item()
         
-        if acc>best_acc:
+        if accuracy>best_accuracy:
             print("**Saving model**")
-            best_acc=acc
+            best_accuracy=accuracy
             torch.save({
                 "epoch": epoch + 1,
                 "state_dict" : model.state_dict(),
-                "acc" : best_acc,
-                "rem" : rem,
-            }, f"checkpoints/{args.name}_finetuned.pth")
+                "acc" : best_accuracy,
+                "rem" : remaining,
+            }, f"checkpoints/{args.name}_{args.dataset}_finetuned.pth")
             
-        train_losses.append(t_loss)
-        val_losses.append(v_loss)
-        val_acc.append(acc)
-        df_data=np.array([train_losses,val_losses,val_acc]).T
-        df = pd.DataFrame(df_data,columns = ['train_losses','val_losses','val_acc'])
-        df.to_csv(f"logs/{args.name}_finetuned.csv")
+        train_losses.append(train_loss)
+        valid_losses.append(valid_loss)
+        valid_accuracy.append(accuracy)
+        df_data=np.array([train_losses, valid_losses, valid_accuracy]).T
+        df = pd.DataFrame(df_data,columns = ['train_losses','valid_losses','valid_accuracy'])
+        df.to_csv(f"logs/{args.name}_{args.dataset}_finetuned.csv")
 
-state = torch.load(f"checkpoints/{args.name}_finetuned.pth")
+state = torch.load(f"checkpoints/{args.name}_{args.dataset}_finetuned.pth")
 model.load_state_dict(state['state_dict'],strict=True)
 acc, v_loss = test(model, criterion, optimizer, "test")
-print(f"test acc: {acc} | val_best_acc: {state['acc']}")
+print(f"Test Accuracy: {acc} | Valid Accuracy: {state['acc']}")
