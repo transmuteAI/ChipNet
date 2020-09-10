@@ -102,7 +102,7 @@ def train(model, loss_fn, optimizer, epoch):
         running_loss+=loss.item()
         tk1.set_postfix(loss=running_loss/counter)
         optimizer.step()
-        steepness+=(10./len(tk1))
+        steepness=min(100,steepness+10./len(tk1))
     return running_loss/counter
 
 def test(model, loss_fn, optimizer, phase, epoch):

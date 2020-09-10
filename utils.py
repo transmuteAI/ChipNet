@@ -53,7 +53,9 @@ def plot_learning_curves(logger_name):
 def visualize_model_architecture(model, budget):
     pruned_model = [3,]
     full_model = [3,]
-    model.prepare_for_finetuning(budget)
+    device = torch.device('cpu')
+    model.to(device)
+    model.prepare_for_finetuning(device,budget)
     for l_block in model.modules():
         if hasattr(l_block, 'zeta'):
             gates = l_block.pruned_zeta.cpu().detach().numpy().tolist()
@@ -68,11 +70,11 @@ def visualize_model_architecture(model, budget):
     print(full_model)
     print(pruned_model)
     plt.show()
+    model(torch.rand(1,3,32,32))
     active_params, total_params = model.get_params_count()
     
     print(f'Total parameter count: {total_params}')
     print(f'Remaining parameter count: {active_params}')
     print(f'Remaining Parameter Fraction: {active_params/total_params}')
     return [full_model, pruned_model]
-
         
