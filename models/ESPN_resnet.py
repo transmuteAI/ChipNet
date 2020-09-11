@@ -99,7 +99,7 @@ class ResNet(BaseModel):
         out = F.log_softmax(out, dim=1)
         return out
 
-     def removable_orphans(self):
+    def removable_orphans(self):
         num_removed = 0
         for l_blocks in [self.layer1, self.layer2, self.layer3]:
             for b in l_blocks:
