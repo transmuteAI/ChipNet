@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python pretraining.py $0 $1 --epohcs 300
+python pretraining.py $0 $1 --epochs 300
 python pruning.py $0 $1 --Vc 0.0625
 python finetuning --name $1\_$0\_0.0625 --epochs 300
 
