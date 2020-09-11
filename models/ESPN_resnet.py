@@ -99,6 +99,26 @@ class ResNet(BaseModel):
         out = F.log_softmax(out, dim=1)
         return out
 
+     def removable_orphans(self):
+        num_removed = 0
+        for l_blocks in [self.layer1, self.layer2, self.layer3]:
+            for b in l_blocks:
+                m1, m2 = b.bn1, b.bn2
+                if self.is_all_pruned(m1) or self.is_all_pruned(m2):
+                    num_removed += self.n_remaining(m1) + self.n_remaining(m2)
+        return num_removed
+
+    def remove_orphans(self):
+        num_removed = 0
+        for l_blocks in [self.layer1, self.layer2, self.layer3]:
+            for b in l_blocks:
+                m1, m2 = b.bn1, b.bn2
+                if self.is_all_pruned(m1) or self.is_all_pruned(m2):
+                    num_removed += self.n_remaining(m1) + self.n_remaining(m2)
+                    m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
+                    m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
+        return num_removed
+
 def resnet32(num_classes):
     return ResNet(BasicBlock, [5, 5, 5], num_classes=num_classes)
 
