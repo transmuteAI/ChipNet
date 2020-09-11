@@ -31,8 +31,8 @@ class Bottleneck(nn.Module):
     def forward(self, x):
         residual = x
 
-        out = self.conv1(out)
-        out = self.bn1(x)
+        out = self.conv1(x)
+        out = self.bn1(out)
         out = self.relu(out)
 
         out = self.conv2(out)
