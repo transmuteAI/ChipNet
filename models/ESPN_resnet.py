@@ -75,6 +75,7 @@ class ResNet(BaseModel):
         self.layer1 = self._make_layer(block, _outputs[0], num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, _outputs[1], num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, _outputs[2], num_blocks[2], stride=2)
+        self.linear = nn.Linear(_outputs[2], num_classes)
 
         self.apply(_weights_init)
 
