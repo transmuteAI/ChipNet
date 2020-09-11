@@ -18,3 +18,4 @@ __pycache__
 data/
 pythonenv3.8
 *.ipynb
+logs/*
