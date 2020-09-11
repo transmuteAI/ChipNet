@@ -7,7 +7,7 @@ from .base_model import BaseModel
 """ 
 Code taken and modified from https://github.com/Eric-mingjie/network-slimming/blob/master/models/preresnet.py
 """
-class Bottleneck(BaseModel):
+class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, cfg, stride=1, downsample=None):
@@ -50,9 +50,9 @@ class Bottleneck(BaseModel):
 
         return out
 
-class ResNet164(nn.Module):
+class ResNet164(BaseModel):
     def __init__(self,num_classes=100, depth=164, cfg=None):
-        super(resnet, self).__init__()
+        super(ResNet164, self).__init__()
         assert (depth - 2) % 9 == 0, 'depth should be 9n+2'
 
         n = (depth - 2) // 9
