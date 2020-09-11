@@ -142,7 +142,7 @@ pruning_threshold = []
 # exact_zeros = []
 # exact_ones = []
 problems = []
-name = f'{args.model}_{args.dataset}_{str(Vc.item())}_pruned'
+name = f'{args.model}_{args.dataset}_{str(np.round(Vc.item(),decimals=4))}_pruned'
 if args.test_only == False:
     for epoch in range(args.epochs):
         print(f'Starting epoch {epoch + 1} / {args.epochs}')
