@@ -254,9 +254,6 @@ def make_resnet32(num_classes):
     model = ResNetCifar(BasicBlock, [5, 5, 5], width=1, num_classes=num_classes)
     return model
 
-def make_resnet164(num_classes):
-    model = ResNetCifar(BasicBlock, [27, 27, 27], width=1, num_classes=num_classes)
-    return model
 
 def make_resnet50(num_classes):
     model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes)
@@ -289,7 +286,5 @@ def get_resnet_model(model, method, num_classes):
         net = make_resnet101(num_classes)
     elif model == 'r152':
         net = make_resnet152(num_classes)
-    elif model == 'r164':
-        net = make_resnet164(num_classes)
     net.prunable_modules = ModuleInjection.prunable_modules
     return net
