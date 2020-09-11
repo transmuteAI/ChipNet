@@ -115,7 +115,7 @@ class ResNetCifar(BaseModel):
             conv_module, bn_module = ModuleInjection.make_prunable(conv_module, bn_module)
             if hasattr(bn_module, 'is_imp'):
                 bn_module.is_imp = True
-            downsample = nn.Sequential([conv_module, bn_module])
+            downsample = nn.Sequential(conv_module, bn_module)
 
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample))
@@ -194,7 +194,7 @@ class ResNet(BaseModel):
             conv_module, bn_module = ModuleInjection.make_prunable(conv_module, bn_module)
             if hasattr(bn_module, 'is_imp'):
                 bn_module.is_imp = True
-            downsample = nn.Sequential([conv_module, bn_module])
+            downsample = nn.Sequential(conv_module, bn_module)
 
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample))
