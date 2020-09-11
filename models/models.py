@@ -1,5 +1,6 @@
 from .resnet import get_resnet_model
 from .vgg import *
+from .network_slimming_resnet import get_network_slimming_model
 
 def get_model(model, method, num_classes):
     """Returns the requested model, ready for training/pruning with the specified method.
