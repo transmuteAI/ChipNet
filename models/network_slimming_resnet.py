@@ -88,7 +88,7 @@ class ResNet164(BaseModel):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             conv_module = nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
+                          kernel_size=1, stride=stride, bias=False)
             bn_module = nn.BatchNorm2d(planes * block.expansion)
             conv_module, bn_module = ModuleInjection.make_prunable(conv_module, bn_module)
             if hasattr(bn_module, 'is_imp'):
