@@ -79,7 +79,7 @@ optimizer_parameters = [
         {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0,'lr':args.lr},
     ]
-optimizer = optim.SGD(optimizer_parameters)
+optimizer = optim.AdamW(optimizer_parameters)
 
 device = torch.device(f"cuda:{str(args.cuda_id)}")
 model.to(device)
