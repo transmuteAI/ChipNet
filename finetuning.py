@@ -15,7 +15,7 @@ seed_everything(43)
 
 ap = argparse.ArgumentParser(description='finetuning')
 ap.add_argument('dataset', choices=['c10', 'c100', 'tin'], type=str, help='Dataset choice')
-ap.add_argument('model', choices=['wrn', 'r50', 'r101', 'r152', 'vgg11', 'vgg13', 'vgg16', 'vgg19'], type=str, help='Model choice')
+ap.add_argument('model', choices=['wrn', 'r32', 'r50', 'r101', 'r152', 'r164', 'vgg11', 'vgg13', 'vgg16', 'vgg19'], type=str, help='Model choice')
 ap.add_argument('--Vc', default=0.5, type=float, help='Budget Constraint')
 ap.add_argument('--batch_size', default=128, type=int, help='Batch Size')
 ap.add_argument('--epochs', default=200, type=int, help='Epochs')

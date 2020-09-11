@@ -10,7 +10,7 @@ def get_model(model, method, num_classes):
     :return: A prunable ResNet model
     """
 
-    if model in ['wrn', 'r50', 'r101', 'r152']:
+    if model in ['wrn', 'r32', 'r50', 'r101', 'r152', 'r164']:
         net = get_resnet_model(model, method, num_classes)
     else:
         net = get_vgg_model(model, method, num_classes)

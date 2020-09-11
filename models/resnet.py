@@ -85,9 +85,9 @@ class Bottleneck(nn.Module):
 
         return out
 
-class WideResNet(BaseModel):
+class ResNetCifar(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000):
-        super(WideResNet, self).__init__()
+        super(ResNetCifar, self).__init__()
         self.prunable_modules = []
         self.inplanes = 16
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
@@ -245,7 +245,15 @@ class ResNet(BaseModel):
 
 
 def make_wide_resnet(num_classes):
-    model = WideResNet(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes)
+    model = ResNetCifar(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes)
+    return model
+
+def make_resnet32(num_classes):
+    model = ResNetCifar(BasicBlock, [5, 5, 5], width=1, num_classes=num_classes)
+    return model
+
+def make_resnet164(num_classes):
+    model = ResNetCifar(BasicBlock, [27, 27, 27], width=1, num_classes=num_classes)
     return model
 
 def make_resnet50(num_classes):
@@ -271,11 +279,15 @@ def get_resnet_model(model, method, num_classes):
     ModuleInjection.pruning_method = method
     if model == 'wrn':
         net = make_wide_resnet(num_classes)
+    elif model == 'r32':
+        net = make_resnet32(num_classes)
     elif model == 'r50':
         net = make_resnet50(num_classes)
     elif model == 'r101':
         net = make_resnet101(num_classes)
     elif model == 'r152':
         net = make_resnet152(num_classes)
+    elif model == 'r164':
+        net = make_resnet164(num_classes)
     net.prunable_modules = ModuleInjection.prunable_modules
     return net
