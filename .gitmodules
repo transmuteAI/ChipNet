@@ -1,0 +1,3 @@
+[submodule "network-slimming"]
+	path = network-slimming
+	url = https://github.com/rishabh-16/network-slimming.git
