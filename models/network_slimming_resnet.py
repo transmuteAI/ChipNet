@@ -16,7 +16,6 @@ class Bottleneck(nn.Module):
         self.conv1 = nn.Conv2d(cfg[0], cfg[1], kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(cfg[1])
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
-        
         self.conv2 = nn.Conv2d(cfg[1], cfg[2], kernel_size=3, stride=stride,
                                padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(cfg[2])
@@ -27,6 +26,9 @@ class Bottleneck(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
+
+        if self.downsample is not None and hasattr(self.bn3, 'is_imp'):
+            self.bn3.is_imp = True
 
     def forward(self, x):
         residual = x
@@ -40,19 +42,18 @@ class Bottleneck(nn.Module):
         out = self.relu(out)
 
         out = self.conv3(out)
-        out = self.bn3(out)
 
         if self.downsample is not None:
             residual = self.downsample(x)
 
         out += residual
+        out = self.bn3(out)
         out = self.relu(out)
-
         return out
 
-class ResNet164(BaseModel):
-    def __init__(self,num_classes=100, depth=164, cfg=None):
-        super(ResNet164, self).__init__()
+class resnet(BaseModel):
+    def __init__(self, num_classes, depth=164, cfg=None):
+        super(resnet, self).__init__()
         assert (depth - 2) % 9 == 0, 'depth should be 9n+2'
 
         n = (depth - 2) // 9
@@ -68,12 +69,12 @@ class ResNet164(BaseModel):
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(16)
+        self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
         self.layer1 = self._make_layer(block, 16, n, cfg = cfg[0:3*n])
         self.layer2 = self._make_layer(block, 32, n, cfg = cfg[3*n:6*n], stride=2)
         self.layer3 = self._make_layer(block, 64, n, cfg = cfg[6*n:9*n], stride=2)
         self.relu = nn.ReLU(inplace=True)
         self.avgpool = nn.AvgPool2d(8)
-
         self.fc = nn.Linear(cfg[-1], num_classes)
 
         for m in self.modules():
@@ -87,13 +88,10 @@ class ResNet164(BaseModel):
     def _make_layer(self, block, planes, blocks, cfg, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
-            conv_module = nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False)
-            bn_module = nn.BatchNorm2d(planes * block.expansion)
-            conv_module, bn_module = ModuleInjection.make_prunable(conv_module, bn_module)
-            if hasattr(bn_module, 'is_imp'):
-                bn_module.is_imp = True
-            downsample = nn.Sequential(conv_module, bn_module)
+            downsample = nn.Sequential(
+                nn.Conv2d(self.inplanes, planes * block.expansion,
+                          kernel_size=1, stride=stride, bias=False),
+            )
 
         layers = []
         layers.append(block(self.inplanes, planes, cfg[0:3], stride, downsample))
@@ -110,14 +108,11 @@ class ResNet164(BaseModel):
         x = self.layer1(x)  # 32x32
         x = self.layer2(x)  # 16x16
         x = self.layer3(x)  # 8x8
-        
-
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
-
         return x
-
+    
     def removable_orphans(self):
         num_removed = 0
         for l_blocks in [self.layer1, self.layer2, self.layer3]:
@@ -141,6 +136,6 @@ class ResNet164(BaseModel):
 
 def get_network_slimming_model(method, num_classes):
     ModuleInjection.pruning_method = method
-    net = ResNet164(num_classes)
+    net = resnet(num_classes)
     net.prunable_modules = ModuleInjection.prunable_modules
     return net
