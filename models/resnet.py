@@ -254,7 +254,6 @@ def make_resnet32(num_classes):
     model = ResNetCifar(BasicBlock, [5, 5, 5], width=1, num_classes=num_classes)
     return model
 
-
 def make_resnet50(num_classes):
     model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes)
     return model
