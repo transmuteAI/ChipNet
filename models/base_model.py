@@ -121,7 +121,7 @@ class BaseModel(nn.Module):
         """freezes zeta"""
         self.device = device
         threshold = self.prune(budget, budget_type=budget_type, finetuning=True)
-        while self.get_remaining()<budget:
+        while self.get_remaining(steepness=20., budget_type=budget_type)<budget:
             threshold-=0.0001
             self.prune(budget, finetuning=True, budget_type=budget_type, threshold=threshold)
 
