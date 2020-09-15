@@ -88,7 +88,6 @@ class Bottleneck(nn.Module):
 class ResNetCifar(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000):
         super(ResNetCifar, self).__init__()
-        self.prunable_modules = []
         self.inplanes = 16
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
@@ -163,8 +162,6 @@ class ResNetCifar(BaseModel):
 class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True):
         super(ResNet, self).__init__()
-        self.prunable_modules = []
-        self.frozen = []
         self.produce_vectors = produce_vectors
         self.inplanes = 64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)

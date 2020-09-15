@@ -17,6 +17,7 @@ seed_everything(43)
 ap = argparse.ArgumentParser(description='pruning with heaviside continuous approximations and logistic curves')
 ap.add_argument('dataset', choices=['c10', 'c100', 'tin'], type=str, help='Dataset choice')
 ap.add_argument('model', choices=['wrn', 'r32', 'r50', 'r101', 'r152', 'r164', 'vgg11', 'vgg13', 'vgg16', 'vgg19'], type=str, help='Model choice')
+ap.add_argument('--budget_type', choices=['channel_ratio', 'volume_ratio'], type=str, help='Budget Type')
 ap.add_argument('--Vc', default=0.25, type=float, help='Budget Constraint')
 ap.add_argument('--batch_size', default=32, type=int, help='Batch Size')
 ap.add_argument('--epochs', default=20, type=int, help='Epochs')
@@ -69,7 +70,7 @@ CE = nn.CrossEntropyLoss()
 def criterion(model, y_pred, y_true):
     global steepness
     ce_loss = CE(y_pred, y_true)
-    budget_loss = ((model.get_remaining(steepness).to(device)-Vc.to(device))**2).to(device)
+    budget_loss = ((model.get_remaining(steepness, args.budget_type).to(device)-Vc.to(device))**2).to(device)
     crispness_loss =  model.get_crispnessLoss(device)
     return budget_loss*weightage1 + crispness_loss*weightage2 + ce_loss
 
@@ -142,7 +143,7 @@ pruning_threshold = []
 # exact_zeros = []
 # exact_ones = []
 problems = []
-name = f'{args.model}_{args.dataset}_{str(np.round(Vc.item(),decimals=4))}_pruned'
+name = f'{args.model}_{args.dataset}_{str(np.round(Vc.item(),decimals=4))}_{args.budget_type}_pruned'
 if args.test_only == False:
     for epoch in range(args.epochs):
         print(f'Starting epoch {epoch + 1} / {args.epochs}')
@@ -150,7 +151,7 @@ if args.test_only == False:
         train(model, criterion, optimizer, epoch)
         print(f'[{epoch + 1} / {args.epochs}] Validation before pruning')
         acc = test(model, criterion, optimizer, "val", epoch)
-        remaining = model.get_remaining(steepness).item()
+        remaining = model.get_remaining(steepness, args.budget_type).item()
         remaining_before_pruning.append(remaining)
         valid_accuracy.append(acc)
         # exactly_zeros, exactly_ones = model.plot_zt()
@@ -160,7 +161,7 @@ if args.test_only == False:
         print(f'[{epoch + 1} / {args.epochs}] Validation after pruning')
         threshold, problem = model.prune(args.Vc)
         acc = test(model, criterion, optimizer, "val", epoch)
-        remaining = model.get_remaining().item()
+        remaining = model.get_remaining(steepness, args.budget_type).item()
         pruning_accuracy.append(acc)
         pruning_threshold.append(threshold)
         remaining_after_pruning.append(remaining)

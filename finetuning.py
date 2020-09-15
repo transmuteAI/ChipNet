@@ -16,6 +16,7 @@ seed_everything(43)
 ap = argparse.ArgumentParser(description='finetuning')
 ap.add_argument('dataset', choices=['c10', 'c100', 'tin'], type=str, help='Dataset choice')
 ap.add_argument('model', choices=['wrn', 'r32', 'r50', 'r101', 'r152', 'r164', 'vgg11', 'vgg13', 'vgg16', 'vgg19'], type=str, help='Model choice')
+ap.add_argument('--budget_type', choices=['channel_ratio', 'volume_ratio'], type=str, help='Budget Type')
 ap.add_argument('--Vc', default=0.5, type=float, help='Budget Constraint')
 ap.add_argument('--batch_size', default=128, type=int, help='Batch Size')
 ap.add_argument('--epochs', default=200, type=int, help='Epochs')
@@ -29,7 +30,6 @@ ap.add_argument('--cuda_id', '-id', type=str, default='0', help='gpu number')
 args = ap.parse_args()
 
 valid_size=args.valid_size
-BATCH_SIZE = args.batch_size
 Vc = torch.FloatTensor([args.Vc])
 model_path = f"checkpoints/{args.name}_pruned.pth"
 
@@ -116,7 +116,7 @@ if args.test_only == False:
         print('Starting epoch %d / %d' % (epoch + 1, num_epochs))
         train_loss = train(model, criterion, optimizer)
         accuracy, valid_loss = test(model, criterion, optimizer, "val")
-        remaining = model.get_remaining().item()
+        remaining = model.get_remaining(20.,args.budget_type).item()
         
         if accuracy>best_accuracy:
             print("**Saving model**")

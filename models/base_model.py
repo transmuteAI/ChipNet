@@ -6,6 +6,7 @@ from .layers import PrunableBatchNorm2d
 class BaseModel(nn.Module):
     def __init__(self):
         super(BaseModel, self).__init__()
+        self.prunable_modules = []
         pass
     
     def set_threshold(self, threshold):
@@ -39,21 +40,23 @@ class BaseModel(nn.Module):
     def is_all_pruned(self, m):
         return self.n_remaining(m) == 0
     
-    def get_remaining(self, steepness=20.):
+    def get_remaining(self, steepness=20., budget_type = 'channel_ratio'):
         """return the fraction of active zeta_t (i.e > 0.5)""" 
         n_rem = 0
         n_total = 0
-        for l_block in self.modules():
-            if  isinstance(l_block, PrunableBatchNorm2d):
+        for l_block in self.prunable_modules:
+            if budget_type == 'volume_ratio':
+                n_rem += (self.n_remaining(l_block, steepness)*l_block._conv_module.output_volume)
+                n_total += (l_block.num_gates*l_block._conv_module.output_volume)
+            elif budget_type == 'channel_ratio':
                 n_rem += self.n_remaining(l_block, steepness)
                 n_total += l_block.num_gates
         return n_rem/n_total
 
     def give_zetas(self):
         zetas = []
-        for l_block in self.modules():
-            if  isinstance(l_block, PrunableBatchNorm2d):
-                zetas.append(l_block.get_zeta_t().cpu().detach().numpy().tolist())
+        for l_block in self.prunable_modules:
+            zetas.append(l_block.get_zeta_t().cpu().detach().numpy().tolist())
         zetas = [z for k in zetas for z in k ]
         return zetas
 
@@ -119,6 +122,15 @@ class BaseModel(nn.Module):
                 active_params+=linear_params
                 total_params+=linear_params
         return active_params, total_params
+
+    def get_volume(self):
+        total_volume = 0.
+        active_volume = 0.
+        for l_block in self.prunable_modules:
+                active_volume_, total_volume_ = l_block.get_volume()
+                active_volume+=active_volume_ 
+                total_volume+=total_volume_
+        return active_volume, total_volume
           
     def set_beta_gamma(self, beta, gamma):
         for l_block in self.modules():
