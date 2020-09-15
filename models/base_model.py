@@ -34,7 +34,7 @@ class BaseModel(nn.Module):
         if budget_type == 'volume_ratio':
             curr_budget = 0
             indx = 0
-            while(curr_budget<Vc):
+            while(curr_budget<(1.-Vc)):
                 indx+=1
                 curr_budget+=zeta_weights[indx]
             prune_threshold = zetas[indx]
