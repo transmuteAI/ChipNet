@@ -120,6 +120,7 @@ class BaseModel(nn.Module):
     def prepare_for_finetuning(self, device, budget, budget_type = 'channel_ratio'):
         """freezes zeta"""
         self.device = device
+        self(torch.rand(2,3,32,32).to(device))
         threshold = self.prune(budget, budget_type=budget_type, finetuning=True)
         while self.get_remaining(steepness=20., budget_type=budget_type)<budget:
             threshold-=0.0001
