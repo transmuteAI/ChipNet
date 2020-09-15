@@ -19,3 +19,4 @@ data/
 pythonenv3.8
 *.ipynb
 logs/*
+logs
