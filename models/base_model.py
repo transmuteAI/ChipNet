@@ -25,10 +25,21 @@ class BaseModel(nn.Module):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.constant_(m.bias, 0)
 
-    def calculate_prune_threshold(self, Vc):
+    def calculate_prune_threshold(self, Vc, budget_type = 'channel_ratio'):
         zetas = self.give_zetas()
+        if budget_type == 'volume_ratio':
+            zeta_weights = self.give_zeta_weights()
+            zeta_weights = zeta_weights[np.argsort(zetas)]
         zetas = sorted(zetas)
-        prune_threshold = zetas[int((1.-Vc)*len(zetas))]
+        if budget_type == 'volume_ratio':
+            curr_budget = 0
+            indx = 0
+            while(curr_budget<Vc):
+                indx+=1
+                curr_budget+=zeta_weights[indx]
+            prune_threshold = zetas[indx]
+        else:
+            prune_threshold = zetas[int((1.-Vc)*len(zetas))]
         return prune_threshold
     
     def smoothRound(self, x, steepness=20.):
@@ -60,6 +71,13 @@ class BaseModel(nn.Module):
         zetas = [z for k in zetas for z in k ]
         return zetas
 
+    def give_zeta_weights(self):
+        zeta_weights = []
+        for l_block in self.prunable_modules:
+            zeta_weights.append([l_block._conv_module.output_volume]*l_block.num_gates)
+        zeta_weights = [z for k in zeta_weights for z in k ]
+        return zeta_weights/np.sum(zeta_weights)
+
     def plot_zt(self):
         """plots the distribution of zeta_t and returns the same"""
         zetas = self.give_zetas()
@@ -77,10 +95,10 @@ class BaseModel(nn.Module):
                 loss = torch.cat([loss, torch.pow(l_block.get_zeta_t()-l_block.get_zeta_i(), 2)])
         return torch.mean(loss).to(device)
 
-    def prune(self, Vc, finetuning=False, threshold=None):
+    def prune(self, Vc, budget_type = 'channel_ratio', finetuning=False, threshold=None):
         """prunes the network to make zeta_t exactly 1 and 0"""
         if threshold==None:
-            self.prune_threshold = self.calculate_prune_threshold(Vc)
+            self.prune_threshold = self.calculate_prune_threshold(Vc, budget_type)
             threshold = min(self.prune_threshold, 0.9)
             
         for l_block in self.modules():
