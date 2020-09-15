@@ -159,7 +159,7 @@ if args.test_only == False:
         # exact_ones.append(exactly_ones)
         
         print(f'[{epoch + 1} / {args.epochs}] Validation after pruning')
-        threshold, problem = model.prune(args.Vc)
+        threshold, problem = model.prune(args.Vc,args.budget_type)
         acc = test(model, criterion, optimizer, "val", epoch)
         remaining = model.get_remaining(steepness, args.budget_type).item()
         pruning_accuracy.append(acc)

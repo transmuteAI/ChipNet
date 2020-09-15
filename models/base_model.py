@@ -117,13 +117,13 @@ class BaseModel(nn.Module):
             if isinstance(l_block, PrunableBatchNorm2d):
                 l_block.unprune()
     
-    def prepare_for_finetuning(self, device, budget):
+    def prepare_for_finetuning(self, device, budget, budget_type = 'channel_ratio'):
         """freezes zeta"""
         self.device = device
-        threshold = self.prune(budget, finetuning=True)
+        threshold = self.prune(budget, budget_type=budget_type, finetuning=True)
         while self.get_remaining()<budget:
             threshold-=0.0001
-            self.prune(budget, finetuning=True, threshold=threshold)
+            self.prune(budget, finetuning=True, budget_type=budget_type, threshold=threshold)
 
         return threshold      
 

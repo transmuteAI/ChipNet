@@ -103,7 +103,7 @@ def test(model, loss_fn, optimizer, phase):
 
 ############################## training starts here #############################
 
-model.prepare_for_finetuning(device, Vc.item()) # sets beta and gamma and unfreezes network except zetas
+model.prepare_for_finetuning(device, Vc.item(), budget_type=args.budget_type) # sets beta and gamma and unfreezes network except zetas
 
 best_accuracy=0
 num_epochs = args.epochs
