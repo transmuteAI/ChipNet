@@ -49,7 +49,7 @@ dataloaders = {
 
 ############################### preparing model ###################################
 
-model = get_model(args.model, 'prune', data_object.num_classes)
+model = get_model(args.model, 'prune', data_object.num_classes, data_object.insize)
 state = torch.load(f"checkpoints/{args.model}_{args.dataset}_pretrained.pth")
 model.load_state_dict(state['state_dict'], strict=False)
 

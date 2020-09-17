@@ -37,7 +37,7 @@ dataloaders = {
 
 ############################### preparing model ###################################
 
-model = get_model(args.model, 'full', data_object.num_classes)
+model = get_model(args.model, 'full', data_object.num_classes, data_object.insize)
 
 ############################## preparing for training #############################
 
