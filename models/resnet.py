@@ -164,7 +164,10 @@ class ResNet(BaseModel):
         super(ResNet, self).__init__()
         self.produce_vectors = produce_vectors
         self.inplanes = 64
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        if insize<128:
+            self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        else:
+            self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
         self.activ = nn.ReLU(inplace=True)
