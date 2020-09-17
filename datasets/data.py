@@ -16,7 +16,8 @@ class DataManager:
         self.workers = args.workers
         self.valid_size = args.valid_size
         self.num_train = 0
-        self.num_classes = {'c10': 10, 'c100': 100, 'tin': 200}[self.dataset_name]
+        self.num_classes = {'c10': 10, 'c100': 100, 'tin': 200, 'tcd': 11}[self.dataset_name]
+        self.insize = {'c10': 32, 'c100': 32, 'tin': 64, 'tcd': 128}[self.dataset_name]
 
     def prepare_data(self):
         print('... Preparing data ...')
