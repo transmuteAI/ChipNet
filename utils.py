@@ -13,11 +13,16 @@ def seed_everything(seed):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     
-def adjust_learning_rate(optimizer, epoch):
+def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 2 every 30 epochs"""
-    lr = 0.05 * (0.5 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+    if args.scheduler_type==1:
+        lr = args.lr * (0.5 ** (epoch // 30))
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+    else:
+        if epoch in [args.epochs*0.5, args.epochs*0.75]:
+            for param_group in optimizer.param_groups:
+                param_group['lr'] *= 0.1
         
 def plot_learning_curves(logger_name):
     train_loss = []
@@ -50,17 +55,17 @@ def plot_learning_curves(logger_name):
     plt.show()
     print()
 
-def visualize_model_architecture(model, budget):
+def visualize_model_architecture(model, budget, budget_type):
     pruned_model = [3,]
     full_model = [3,]
     device = torch.device('cpu')
     model.to(device)
-    model.prepare_for_finetuning(device,budget)
-    for l_block in model.modules():
-        if hasattr(l_block, 'zeta'):
-            gates = l_block.pruned_zeta.cpu().detach().numpy().tolist()
-            full_model.append(len(gates))
-            pruned_model.append(np.sum(gates))
+    model(torch.rand(1,3,32,32))
+    model.prepare_for_finetuning(device=device,budget=budget,budget_type=budget_type)
+    for l_block in model.prunable_modules:
+        gates = l_block.pruned_zeta.cpu().detach().numpy().tolist()
+        full_model.append(len(gates))
+        pruned_model.append(np.sum(gates))
     fig = plt.figure()
     ax = fig.add_axes([0,0,1,1])
     full_model = np.array(full_model)
@@ -70,7 +75,6 @@ def visualize_model_architecture(model, budget):
     print(full_model)
     print(pruned_model)
     plt.show()
-    model(torch.rand(1,3,32,32))
     active_params, total_params = model.get_params_count()
     
     print(f'Total parameter count: {total_params}')
