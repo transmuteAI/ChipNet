@@ -15,7 +15,7 @@ seed_everything(43)
 
 ap = argparse.ArgumentParser(description='finetuning')
 ap.add_argument('dataset', choices=['c10', 'c100', 'tin'], type=str, help='Dataset choice')
-ap.add_argument('model', choices=['wrn', 'r32', 'r50', 'r101', 'r152', 'r164', 'vgg11', 'vgg13', 'vgg16', 'vgg19'], type=str, help='Model choice')
+ap.add_argument('model', type=str, help='Model choice')
 ap.add_argument('--budget_type', choices=['channel_ratio', 'volume_ratio'], default = 'channel_ratio', type=str, help='Budget Type')
 ap.add_argument('--Vc', default=0.5, type=float, help='Budget Constraint')
 ap.add_argument('--batch_size', default=128, type=int, help='Batch Size')
@@ -24,6 +24,8 @@ ap.add_argument('--name', type=str, help='name of model')
 
 ap.add_argument('--valid_size', '-v', type=float, default=0.1, help='valid_size')
 ap.add_argument('--lr', default=0.05, type=float, help='Learning rate')
+ap.add_argument('--scheduler_type', '-st', type=int, choices=[1, 2], default=1, help='lr scheduler type')
+ap.add_argument('--decay', '-d', type=float, default=0.001, help='weight decay')
 ap.add_argument('--test_only', '-t', type=bool, default=False, help='test the best model')
 ap.add_argument('--workers', default=0, type=int, help='number of workers')
 ap.add_argument('--cuda_id', '-id', type=str, default='0', help='gpu number')
@@ -53,7 +55,7 @@ def criterion(model, y_pred, y_true):
     ce_loss = CE(y_pred, y_true)
     return ce_loss
 
-optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.001)
+optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.decay)
 device = torch.device(f"cuda:{str(args.cuda_id)}")
 model.to(device)
 Vc.to(device)
@@ -112,7 +114,7 @@ valid_losses = []
 valid_accuracy = []
 if args.test_only == False:
     for epoch in range(num_epochs):
-        adjust_learning_rate(optimizer, epoch)
+        adjust_learning_rate(optimizer, epoch, args)
         print('Starting epoch %d / %d' % (epoch + 1, num_epochs))
         train_loss = train(model, criterion, optimizer)
         accuracy, valid_loss = test(model, criterion, optimizer, "val")

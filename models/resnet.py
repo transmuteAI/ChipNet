@@ -160,7 +160,7 @@ class ResNetCifar(BaseModel):
         return num_removed
     
 class ResNet(BaseModel):
-    def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True):
+    def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True, insize):
         super(ResNet, self).__init__()
         self.produce_vectors = produce_vectors
         self.inplanes = 64
