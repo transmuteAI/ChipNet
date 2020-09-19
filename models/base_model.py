@@ -90,9 +90,8 @@ class BaseModel(nn.Module):
     def get_crispnessLoss(self, device):
         """loss reponsible for making zeta_t 1 or 0"""
         loss = torch.FloatTensor([]).to(device)
-        for l_block in self.modules():
-            if isinstance(l_block, PrunableBatchNorm2d):
-                loss = torch.cat([loss, torch.pow(l_block.get_zeta_t()-l_block.get_zeta_i(), 2)])
+        for l_block in self.prunable_modules:
+            loss = torch.cat([loss, torch.pow(l_block.get_zeta_t()-l_block.get_zeta_i(), 2)])
         return torch.mean(loss).to(device)
 
     def prune(self, Vc, budget_type = 'channel_ratio', finetuning=False, threshold=None):
@@ -101,9 +100,8 @@ class BaseModel(nn.Module):
             self.prune_threshold = self.calculate_prune_threshold(Vc, budget_type)
             threshold = min(self.prune_threshold, 0.9)
             
-        for l_block in self.modules():
-            if isinstance(l_block, PrunableBatchNorm2d):
-                l_block.prune(threshold)
+        for l_block in self.prunable_modules:
+            l_block.prune(threshold)
 
         if finetuning:
             self.remove_orphans()
@@ -113,9 +111,8 @@ class BaseModel(nn.Module):
             return threshold, problem
 
     def unprune(self):
-        for l_block in self.modules():
-            if isinstance(l_block, PrunableBatchNorm2d):
-                l_block.unprune()
+        for l_block in self.prunable_modules:
+            l_block.unprune()
     
     def prepare_for_finetuning(self, device, budget, budget_type = 'channel_ratio'):
         """freezes zeta"""
@@ -152,9 +149,8 @@ class BaseModel(nn.Module):
         return active_volume, total_volume
           
     def set_beta_gamma(self, beta, gamma):
-        for l_block in self.modules():
-            if isinstance(l_block, PrunableBatchNorm2d):
-                l_block.set_beta_gamma(beta, gamma)
+        for l_block in self.prunable_modules:
+            l_block.set_beta_gamma(beta, gamma)
     
     def check_abnormality(self):
         n_removable = self.removable_orphans()
@@ -167,8 +163,7 @@ class BaseModel(nn.Module):
             return 'broken'
         
     def check_if_broken(self):
-        for bn in self.modules():
-            if isinstance(bn, PrunableBatchNorm2d) and bn.is_imp:
-                if bn.pruned_zeta.sum()==0:
-                    return True
+        for bn in self.prunable_modules:
+            if bn.is_imp and bn.pruned_zeta.sum()==0:
+                return True
         return False
