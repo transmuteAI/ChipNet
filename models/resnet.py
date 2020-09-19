@@ -268,6 +268,7 @@ def get_resnet_model(model, method, num_classes, insize):
     :return: A prunable ResNet model
     """
     ModuleInjection.pruning_method = method
+    ModuleInjection.prunable_modules = []
     if model == 'wrn':
         net = make_wide_resnet(num_classes)
     elif model == 'r50':
