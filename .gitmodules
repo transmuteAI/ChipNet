@@ -1,3 +1,6 @@
 [submodule "network-slimming"]
 	path = network-slimming
 	url = https://github.com/rishabh-16/network-slimming.git
+[submodule "PyTorch-YOLOv3"]
+	path = PyTorch-YOLOv3
+	url = https://github.com/ubamba98/PyTorch-YOLOv3
