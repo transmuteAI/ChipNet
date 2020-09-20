@@ -21,6 +21,7 @@ ap.add_argument('--Vc', default=0.5, type=float, help='Budget Constraint')
 ap.add_argument('--batch_size', default=128, type=int, help='Batch Size')
 ap.add_argument('--epochs', default=200, type=int, help='Epochs')
 ap.add_argument('--name', type=str, help='name of model')
+ap.add_argument('--host_model',default = None, type=str, help='transfer the mask from this model')
 
 ap.add_argument('--valid_size', '-v', type=float, default=0.1, help='valid_size')
 ap.add_argument('--lr', default=0.05, type=float, help='Learning rate')
@@ -33,7 +34,11 @@ args = ap.parse_args()
 
 valid_size=args.valid_size
 Vc = torch.FloatTensor([args.Vc])
-model_path = f"checkpoints/{args.name}_pruned.pth"
+if args.host_model == None:
+    model_path = f"checkpoints/{args.name}_pruned.pth"
+else:
+    model_path = f"checkpoints/{args.name}_pretrained.pth"
+    host_model_path = f"checkpoints/{args.host_model}_pruned.pth"
 
 ############################### preparing dataset ################################
 
@@ -46,10 +51,11 @@ dataloaders = {
 ############################### preparing model ###################################
 
 model = get_model(args.model, 'prune', data_object.num_classes, data_object.insize)
-        
+if host_model is not None:
+    model.load_state_dict(torch.load(host_model_path)['state_dict'], strict = False)
 state = torch.load(model_path)
 model.load_state_dict(state['state_dict'], strict=False)
-
+print(model.give_zetas())
 CE = nn.CrossEntropyLoss()
 def criterion(model, y_pred, y_true):
     ce_loss = CE(y_pred, y_true)

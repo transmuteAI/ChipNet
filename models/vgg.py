@@ -77,6 +77,7 @@ def get_vgg_model(model, method, num_classes):
     :return: A prunable ResNet model
     """
     ModuleInjection.pruning_method = method
+    ModuleInjection.prunable_modules = []
     if model == 'vgg11':
         net = make_vgg11_bn(num_classes)
     elif model == 'vgg13':

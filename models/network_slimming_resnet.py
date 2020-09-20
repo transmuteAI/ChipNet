@@ -136,6 +136,7 @@ class resnet(BaseModel):
 
 def get_network_slimming_model(method, num_classes):
     ModuleInjection.pruning_method = method
+    ModuleInjection.prunable_modules = []
     net = resnet(num_classes)
     net.prunable_modules = ModuleInjection.prunable_modules
     return net
