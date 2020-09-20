@@ -56,7 +56,6 @@ if args.host_model is not None:
     model.load_state_dict(get_compatible_state_dict(model.state_dict(), host_state), strict = False)
 state = torch.load(model_path)
 model.load_state_dict(state['state_dict'], strict=False)
-print(model.give_zetas())
 CE = nn.CrossEntropyLoss()
 def criterion(model, y_pred, y_true):
     ce_loss = CE(y_pred, y_true)
