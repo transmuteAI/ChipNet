@@ -51,7 +51,7 @@ dataloaders = {
 ############################### preparing model ###################################
 
 model = get_model(args.model, 'prune', data_object.num_classes, data_object.insize)
-if host_model is not None:
+if args.host_model is not None:
     host_state = torch.load(host_model_path)['state_dict']
     model.load_state_dict(get_compatible_state_dict(model.state_dict(), host_state), strict = False)
 state = torch.load(model_path)
