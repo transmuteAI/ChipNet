@@ -12,6 +12,18 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
+
+def get_compatible_state_dict(own_state, state_dict):
+    for name, param in state_dict.items():
+        if name not in own_state:
+             continue
+        if 'fc' in name:
+            continue
+        if isinstance(param, nn.Parameter):
+            # backwards compatibility for serialized parameters
+            param = param.data
+        own_state[name].copy_(param)
+    return own_state
     
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 2 every 30 epochs"""
