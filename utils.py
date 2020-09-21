@@ -89,9 +89,25 @@ def visualize_model_architecture(model, budget, budget_type):
     print(pruned_model)
     plt.show()
     active_params, total_params = model.get_params_count()
-    
-    print(f'Total parameter count: {total_params}')
+    active_volume, total_volume = model.get_volume()
+    active_flops, total_flops = model.get_flops()
+    active_channels, total_channels = model.get_channels()
+
+    print(f'\nTotal parameter count: {total_params}')
     print(f'Remaining parameter count: {active_params}')
     print(f'Remaining Parameter Fraction: {active_params/total_params}')
+
+    print(f'\nTotal volume count: {total_volume}')
+    print(f'Remaining volume count: {active_volume}')
+    print(f'Remaining volume Fraction: {active_volume/total_volume}')
+
+    print(f'\nTotal flops count: {total_flops}')
+    print(f'Remaining flops count: {active_flops}')
+    print(f'Remaining flops Fraction: {active_flops/total_flops}')
+
+    print(f'\nTotal channels count: {total_channels}')
+    print(f'Remaining channels count: {active_channels}')
+    print(f'Remaining channels Fraction: {active_channels/total_channels}')
+
     return [full_model, pruned_model]
         

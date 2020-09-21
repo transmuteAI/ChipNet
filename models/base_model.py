@@ -57,8 +57,8 @@ class BaseModel(nn.Module):
         n_total = 0
         for l_block in self.prunable_modules:
             if budget_type == 'volume_ratio':
-                n_rem += (self.n_remaining(l_block, steepness)*l_block._conv_module.output_volume)
-                n_total += (l_block.num_gates*l_block._conv_module.output_volume)
+                n_rem += (self.n_remaining(l_block, steepness)*l_block._conv_module.output_area)
+                n_total += (l_block.num_gates*l_block._conv_module.output_area)
             elif budget_type == 'channel_ratio':
                 n_rem += self.n_remaining(l_block, steepness)
                 n_total += l_block.num_gates
@@ -74,7 +74,7 @@ class BaseModel(nn.Module):
     def give_zeta_weights(self):
         zeta_weights = []
         for l_block in self.prunable_modules:
-            zeta_weights.append([l_block._conv_module.output_volume]*l_block.num_gates)
+            zeta_weights.append([l_block._conv_module.output_area]*l_block.num_gates)
         zeta_weights = [z for k in zeta_weights for z in k ]
         return zeta_weights/np.sum(zeta_weights)
 
@@ -147,6 +147,23 @@ class BaseModel(nn.Module):
                 active_volume+=active_volume_ 
                 total_volume+=total_volume_
         return active_volume, total_volume
+
+    def get_flops(self):
+        total_flops = 0.
+        active_flops = 0.
+        for l_block in self.prunable_modules:
+                active_flops_, total_flops_ = l_block.get_flops()
+                active_flops+=active_flops_ 
+                total_flops+=total_flops_
+        return active_flops, total_flops
+    
+    def get_channels(self):
+        total_channels = 0.
+        active_channels = 0.
+        for l_block in self.prunable_modules:
+                active_channels+=l_block.pruned_zeta.sum().item()
+                total_channels+=l_block.num_gates
+        return active_channels, total_channels
           
     def set_beta_gamma(self, beta, gamma):
         for l_block in self.prunable_modules:

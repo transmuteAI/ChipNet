@@ -10,10 +10,11 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         self.num_gates = num_features
         self.zeta = nn.Parameter(torch.rand(num_features) * 0.01)
         self.pruned_zeta = torch.ones_like(self.zeta)
-        def save_input_active_channels_count(module, in_tensor, out_tensor):
-            module.num_input_active_channels = (in_tensor[0].sum((0,2,3))>0).sum().item()
-            module.output_volume = out_tensor.size(2) * out_tensor.size(3)
-        conv_module.register_forward_hook(save_input_active_channels_count)
+        if conv_module is not None:
+            def fo_hook(module, in_tensor, out_tensor):
+                module.num_input_active_channels = (in_tensor[0].sum((0,2,3))>0).sum().item()
+                module.output_area = out_tensor.size(2) * out_tensor.size(3)
+            conv_module.register_forward_hook(fo_hook)
         self._conv_module = conv_module
         beta=1.
         gamma=2.
@@ -56,14 +57,21 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
 
     def get_params_count(self):
         total_conv_params = self._conv_module.in_channels*self.pruned_zeta.shape[0]*self._conv_module.kernel_size[0]*self._conv_module.kernel_size[1]
-        bn_params = self.num_gates*3
+        bn_params = self.num_gates*2
+        active_bn_params = self.pruned_zeta.sum().item()*2
         active_conv_params = self._conv_module.num_input_active_channels*self.pruned_zeta.sum().item()*self._conv_module.kernel_size[0]*self._conv_module.kernel_size[1]
-        return active_conv_params+bn_params, total_conv_params+bn_params
+        return active_conv_params+active_bn_params, total_conv_params+bn_params
 
     def get_volume(self):
-        total_volume = self._conv_module.output_volume*self.num_gates
+        total_volume = self._conv_module.output_area*self.num_gates
         active_volume = self._conv_module*self.pruned_zeta.sum().item()
         return active_volume, total_volume
+    
+    def get_flops(self):
+        k_area = m.kernel_size[0]*m.kernel_size[1]
+        total_flops = self._conv_module.output_area*self.num_gates*self._conv_module.in_channels*k_area
+        active_flops = self._conv_module.output_area*self.pruned_zeta.sum().item()*self._conv_module.num_input_active_channels*k_area
+        return active_flops, total_flops
 
     @staticmethod
     def from_batchnorm(bn_module, conv_module):
@@ -76,7 +84,7 @@ class ModuleInjection:
     prunable_modules = []
 
     @staticmethod
-    def make_prunable(conv_module: nn.Conv2d, bn_module: nn.BatchNorm2d):
+    def make_prunable(conv_module, bn_module):
         """Make a (conv, bn) sequence prunable.
         :param conv_module: A Conv2d module
         :param bn_module: The BatchNorm2d module following the Conv2d above
