@@ -14,11 +14,11 @@ def seed_everything(seed):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
 
-def get_compatible_state_dict(own_state, state_dict):
+def get_mask_dict(own_state, state_dict):
     for name, param in state_dict.items():
         if name not in own_state:
              continue
-        if 'fc' in name:
+        if 'zeta' not in name and 'beta' not in name and 'gamma' not in name:
             continue
         if isinstance(param, nn.Parameter):
             # backwards compatibility for serialized parameters

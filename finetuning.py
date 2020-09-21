@@ -19,9 +19,9 @@ ap.add_argument('model', type=str, help='Model choice')
 ap.add_argument('--budget_type', choices=['channel_ratio', 'volume_ratio'], default = 'channel_ratio', type=str, help='Budget Type')
 ap.add_argument('--Vc', default=0.5, type=float, help='Budget Constraint')
 ap.add_argument('--batch_size', default=128, type=int, help='Batch Size')
-ap.add_argument('--epochs', default=200, type=int, help='Epochs')
+ap.add_argument('--epochs', default=300, type=int, help='Epochs')
 ap.add_argument('--name', type=str, help='name of model')
-ap.add_argument('--host_model',default = None, type=str, help='transfer the mask from this model')
+ap.add_argument('--host_name',default = None, type=str, help='transfer the mask from this model')
 
 ap.add_argument('--valid_size', '-v', type=float, default=0.1, help='valid_size')
 ap.add_argument('--lr', default=0.05, type=float, help='Learning rate')
@@ -34,11 +34,11 @@ args = ap.parse_args()
 
 valid_size=args.valid_size
 Vc = torch.FloatTensor([args.Vc])
-if args.host_model == None:
+if args.host_name == None:
     model_path = f"checkpoints/{args.name}_pruned.pth"
 else:
-    model_path = f"checkpoints/{args.name}_pretrained.pth"
-    host_model_path = f"checkpoints/{args.host_model}_pruned.pth"
+#     model_path = f"checkpoints/{args.name}_pretrained.pth"
+    model_path = f"checkpoints/{args.host_name}_pruned.pth"
 
 ############################### preparing dataset ################################
 
@@ -51,11 +51,12 @@ dataloaders = {
 ############################### preparing model ###################################
 
 model = get_model(args.model, 'prune', data_object.num_classes, data_object.insize)
-if args.host_model is not None:
-    host_state = torch.load(host_model_path)['state_dict']
-    model.load_state_dict(get_compatible_state_dict(model.state_dict(), host_state), strict = False)
-state = torch.load(model_path)
-model.load_state_dict(state['state_dict'], strict=False)
+if args.host_name is not None:
+    host_state = torch.load(model_path)['state_dict']
+    model.load_state_dict(get_mask_dict(model.state_dict(), host_state), strict = False)
+else:
+    state = torch.load(model_path)['state_dict']
+    model.load_state_dict(state, strict=False)
 CE = nn.CrossEntropyLoss()
 def criterion(model, y_pred, y_true):
     ce_loss = CE(y_pred, y_true)
