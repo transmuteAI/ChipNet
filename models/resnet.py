@@ -254,6 +254,10 @@ def make_resnet50(num_classes, insize):
     model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, insize=insize)
     return model
 
+def make_resnet18(num_classes, insize):
+    model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, insize=insize)
+    return model
+
 def make_resnet101(num_classes, insize):
     model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes=num_classes, insize=insize)
     return model
@@ -271,6 +275,8 @@ def get_resnet_model(model, method, num_classes, insize):
     ModuleInjection.prunable_modules = []
     if model == 'wrn':
         net = make_wide_resnet(num_classes)
+    elif model == 'r18':
+        net = make_resnet18(num_classes, insize)
     elif model == 'r50':
         net = make_resnet50(num_classes, insize)
     elif model == 'r101':
