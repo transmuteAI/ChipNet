@@ -68,7 +68,7 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         return active_volume, total_volume
     
     def get_flops(self):
-        k_area = m.kernel_size[0]*m.kernel_size[1]
+        k_area = self._conv_module.kernel_size[0]*self._conv_module.kernel_size[1]
         total_flops = self._conv_module.output_area*self.num_gates*self._conv_module.in_channels*k_area
         active_flops = self._conv_module.output_area*self.pruned_zeta.sum().item()*self._conv_module.num_input_active_channels*k_area
         return active_flops, total_flops
