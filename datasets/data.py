@@ -1,7 +1,7 @@
 import os
 
 import torch
-import torch.utils.data as data, ConcatDataset
+import torch.utils.data as data
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import transforms, datasets
 from torchvision.datasets import CIFAR10, CIFAR100, SVHN
@@ -59,20 +59,15 @@ class DataManager:
                 transforms.ToTensor(),
                 norm_transform
             ])
-            trainset = dataset_choice(root='./data', split='train', download=True,
-                                            transform=train_transform)
-            trainset_extra = dataset_choice(root='./data', split='extra', download=True,
+            trainset = SVHN(root='./data', split='train', download=True,
                                             transform=train_transform)
 
-            valset = dataset_choice(root='./data', split='train', download=True,
-                                                transform=val_transform)
-            valset_extra = dataset_choice(root='./data', split='extra', download=True,
+            valset = SVHN(root='./data', split='train', download=True,
                                                 transform=val_transform)
 
-            testset = dataset_choice(root='./data', split='test', download=True,
+
+            testset = SVHN(root='./data', split='test', download=True,
                                                 transform=val_transform)
-            trainset = ConcatDataset([trainset,trainset_extra])
-            valset = ConcatDataset([valset,valset_extra])
             
         else:
             norm_mean = [0.485, 0.456, 0.406]
