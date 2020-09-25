@@ -14,7 +14,7 @@ from models import get_model
 seed_everything(43)
 
 ap = argparse.ArgumentParser(description='pretraining')
-ap.add_argument('dataset', choices=['c10', 'c100', 'tin'], type=str, help='Dataset choice')
+ap.add_argument('dataset', choices=['c10', 'c100', 'tin','svhn'], type=str, help='Dataset choice')
 ap.add_argument('model', type=str, help='Model choice')
 ap.add_argument('--test_only', '-t', type=bool, default=False, help='test the best model')
 ap.add_argument('--valid_size', '-v', type=float, default=0.1, help='valid_size')

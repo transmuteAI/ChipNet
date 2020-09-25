@@ -1,10 +1,10 @@
 import os
 
 import torch
-import torch.utils.data as data
+import torch.utils.data as data, ConcatDataset
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import transforms, datasets
-from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.datasets import CIFAR10, CIFAR100, SVHN
 from .tinyimagenet import TinyImageNet
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -16,8 +16,8 @@ class DataManager:
         self.workers = args.workers
         self.valid_size = args.valid_size
         self.num_train = 0
-        self.num_classes = {'c10': 10, 'c100': 100, 'tin': 200, 'tcd': 11}[self.dataset_name]
-        self.insize = {'c10': 32, 'c100': 32, 'tin': 64, 'tcd': 128}[self.dataset_name]
+        self.num_classes = {'c10': 10, 'c100': 100, 'tin': 200, 'svhn': 10}[self.dataset_name]
+        self.insize = {'c10': 32, 'c100': 32, 'tin': 64, 'svhn': 32}[self.dataset_name]
 
     def prepare_data(self):
         print('... Preparing data ...')
@@ -45,6 +45,35 @@ class DataManager:
             testset = dataset_choice(root='./data', train=False, download=True,
                                                 transform=val_transform)
                                                 
+        elif self.dataset_name == 'svhn':
+            norm_mean =[0.4309, 0.4302, 0.4463]
+            norm_std = [0.1253, 0.1282, 0.1147]
+            norm_transform = transforms.Normalize(norm_mean, norm_std)
+            train_transform = transforms.Compose([
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                norm_transform
+            ])
+            val_transform = transforms.Compose([
+                transforms.ToTensor(),
+                norm_transform
+            ])
+            trainset = dataset_choice(root='./data', split='train', download=True,
+                                            transform=train_transform)
+            trainset_extra = dataset_choice(root='./data', split='extra', download=True,
+                                            transform=train_transform)
+
+            valset = dataset_choice(root='./data', split='train', download=True,
+                                                transform=val_transform)
+            valset_extra = dataset_choice(root='./data', split='extra', download=True,
+                                                transform=val_transform)
+
+            testset = dataset_choice(root='./data', split='test', download=True,
+                                                transform=val_transform)
+            trainset = ConcatDataset([trainset,trainset_extra])
+            valset = ConcatDataset([valset,valset_extra])
+            
         else:
             norm_mean = [0.485, 0.456, 0.406]
             norm_std = [0.229, 0.224, 0.225]
