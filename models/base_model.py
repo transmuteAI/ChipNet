@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from collections import defaultdict
 from .layers import PrunableBatchNorm2d
 
 class BaseModel(nn.Module):
     def __init__(self):
         super(BaseModel, self).__init__()
         self.prunable_modules = []
+        self.prev_module = defaultdict()
         pass
     
     def set_threshold(self, threshold):
@@ -27,8 +29,8 @@ class BaseModel(nn.Module):
 
     def calculate_prune_threshold(self, Vc, budget_type = 'channel_ratio'):
         zetas = self.give_zetas()
-        if budget_type == 'volume_ratio':
-            zeta_weights = self.give_zeta_weights()
+        if budget_type in ['volume_ratio']:
+            zeta_weights = self.give_zeta_weights(budget_type)
             zeta_weights = zeta_weights[np.argsort(zetas)]
         zetas = sorted(zetas)
         if budget_type == 'volume_ratio':
@@ -62,6 +64,12 @@ class BaseModel(nn.Module):
             elif budget_type == 'channel_ratio':
                 n_rem += self.n_remaining(l_block, steepness)
                 n_total += l_block.num_gates
+            elif budget_type == 'parameter_ratio':
+                k = l_block._conv_module.kernel_size[0]
+                prev_total = 3 if self.prev_module[l_block] is None else self.prev_module[l_block].num_gates
+                prev_remaining = 3 if self.prev_module[l_block] is None else self.n_remaining(self.prev_module[l_block], steepness) 
+                n_rem += self.n_remaining(l_block, steepness)*prev_remaining*k*k
+                n_total += l_block.num_gates*prev_total
         return n_rem/n_total
 
     def give_zetas(self):
@@ -96,10 +104,25 @@ class BaseModel(nn.Module):
 
     def prune(self, Vc, budget_type = 'channel_ratio', finetuning=False, threshold=None):
         """prunes the network to make zeta_t exactly 1 and 0"""
-        if threshold==None:
-            self.prune_threshold = self.calculate_prune_threshold(Vc, budget_type)
-            threshold = min(self.prune_threshold, 0.9)
-            
+
+        if(budget_type == 'parameter_ratio'):
+            zetas = sorted(self.give_zetas())
+            high = len(zetas)-1
+            low = 0
+            while low<high:
+                mid = (high + low)//2
+                threshold = zetas[mid]
+                for l_block in self.prunable_modules:
+                    l_block.prune(threshold)
+                if self.get_remaining(20, budget_type)<budget:
+                    high = mid-1
+                else:
+                    low = mid+1
+        else:
+            if threshold==None:
+                self.prune_threshold = self.calculate_prune_threshold(Vc, budget_type)
+                threshold = min(self.prune_threshold, 0.9)
+                
         for l_block in self.prunable_modules:
             l_block.prune(threshold)
 
