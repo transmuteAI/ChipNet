@@ -166,7 +166,7 @@ class BaseModel(nn.Module):
         self.device = device
         self(torch.rand(2,3,32,32).to(device))
         threshold = self.prune(budget, budget_type=budget_type, finetuning=True)
-        if budget_type is not in ['parameter_ratio', 'flops_ratio']:
+        if budget_type not in ['parameter_ratio', 'flops_ratio']:
             while self.get_remaining(steepness=20., budget_type=budget_type)<budget:
                 threshold-=0.0001
                 self.prune(budget, finetuning=True, budget_type=budget_type, threshold=threshold)
