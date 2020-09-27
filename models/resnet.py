@@ -226,7 +226,71 @@ class ResNetCifar(BaseModel):
         ans+=x*a[27]*9
         ans+=a[27]*a[28]*9
         x = max(a[28],x)
-        return (ans + a[-1]*10 + 2*np.sum(a))/52520534
+        return (ans + a[-1]*100 + 2*np.sum(a))/52589754
+
+    def flops(self):
+        a = [3]
+        for i in self.prunable_modules:
+            a.append(int(i.pruned_zeta.sum()))
+
+        ans=0
+
+        ans+=a[0]*a[1]*9*32*32 + a[1]*32*32
+        
+        ans+=a[1]*a[2]*32*32 + a[2]*32*32 #--->downsample
+
+        ans+=a[1]*a[3]*9 *32*32 + a[3]*32*32
+        ans+=a[3]*a[4]*9*32*32 + a[4]*32*32
+        x = max(a[2],a[4])
+
+        ans+=x*a[5]*9*32*32 + a[5]*32*32 
+        ans+=a[5]*a[6]*9*32*32 + a[6]*32*32
+        x = max(a[6],x)
+
+        ans+=x*a[7]*9*32*32 + a[7]*32*32
+        ans+=a[7]*a[8]*9*32*32 + a[8]*32*32
+        x = max(a[8],x)
+
+        ans+=x*a[9]*9*32*32 + a[9]*32*32
+        ans+=a[9]*a[10]*9*32*32 + a[10]*32*32
+        x = max(a[10],x)
+
+        ans+=x*a[11]*16*16 + a[11]*16*16 #--->downsample
+
+        ans+=x*a[12]*9*16*16 + a[12]*16*16
+        ans+=a[12]*a[13]*9*16*16 + a[13]*16*16
+        x = max(a[11],a[13])
+
+        ans+=x*a[14]*9*16*16 + a[14]*16*16
+        ans+=a[14]*a[15]*9*16*16 + a[15]*16*16
+        x = max(a[15],x)
+
+        ans+=x*a[16]*9*16*16 + a[16]*16*16
+        ans+=a[16]*a[17]*9*16*16 + a[17]*16*16
+        x = max(a[17],x)
+
+        ans+=x*a[18]*9*16*16 + a[18]*16*16
+        ans+=a[18]*a[19]*9*16*16 + a[19]*16*16
+        x = max(a[19],x)
+
+        ans+=x*a[20]*8*8 #--->downsample
+
+        ans+=x*a[21]*9*8*8 + a[21]*8*8
+        ans+=a[21]*a[22]*9*8*8 + a[22]*8*8
+        x = max(a[20],a[22])
+
+        ans+=x*a[23]*9*8*8 + a[23]*8*8
+        ans+=a[23]*a[24]*9*8*8 + a[24]*8*8
+        x = max(a[24],x)
+
+        ans+=x*a[25]*9*8*8 + a[25]*8*8
+        ans+=a[25]*a[26]*9*8*8 + a[26]*8*8
+        x = max(a[26],x)
+
+        ans+=x*a[27]*9*8*8 + a[27]*8*8
+        ans+=a[27]*a[28]*9*8*8 + a[28]*8*8
+        x = max(a[28],x)
+        return (2*ans + 2*(x-1)*100)/15094077240
     
 class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True, insize=32):

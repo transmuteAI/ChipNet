@@ -71,6 +71,14 @@ class BaseModel(nn.Module):
                 prev_remaining = 3 if self.prev_module[l_block] is None else self.n_remaining(self.prev_module[l_block], steepness) 
                 n_rem += self.n_remaining(l_block, steepness)*prev_remaining*k*k
                 n_total += l_block.num_gates*prev_total*k*k
+            elif budget_type == 'flops_ratio':
+                k = l_block._conv_module.kernel_size[0]
+                output_area = l_block._conv_module.output_area
+                prev_total = 3 if self.prev_module[l_block] is None else self.prev_module[l_block].num_gates
+                prev_remaining = 3 if self.prev_module[l_block] is None else self.n_remaining(self.prev_module[l_block], steepness) 
+                curr_remaining = self.n_remaining(l_block, steepness)
+                n_rem += curr_remaining*prev_remaining*k*k*output_area + curr_remaining*output_area
+                n_total += l_block.num_gates*prev_total*k*k*output_area + l_block.num_gates*output_area
         return n_rem/n_total
 
     def give_zetas(self):
@@ -106,7 +114,7 @@ class BaseModel(nn.Module):
     def prune(self, Vc, budget_type = 'channel_ratio', finetuning=False, threshold=None):
         """prunes the network to make zeta_t exactly 1 and 0"""
 
-        if(budget_type == 'parameter_ratio'):
+        if budget_type == 'parameter_ratio':
             zetas = sorted(self.give_zetas())
             high = len(zetas)-1
             low = 0
@@ -117,6 +125,20 @@ class BaseModel(nn.Module):
                     l_block.prune(threshold)
                 self.remove_orphans()
                 if self.params()<Vc:
+                    high = mid-1
+                else:
+                    low = mid+1
+        elif budget_type == 'flops_ratio':
+            zetas = sorted(self.give_zetas())
+            high = len(zetas)-1
+            low = 0
+            while low<high:
+                mid = (high + low)//2
+                threshold = zetas[mid]
+                for l_block in self.prunable_modules:
+                    l_block.prune(threshold)
+                self.remove_orphans()
+                if self.flops()<Vc:
                     high = mid-1
                 else:
                     low = mid+1
@@ -144,7 +166,7 @@ class BaseModel(nn.Module):
         self.device = device
         self(torch.rand(2,3,32,32).to(device))
         threshold = self.prune(budget, budget_type=budget_type, finetuning=True)
-        if budget_type != 'parameter_ratio':
+        if budget_type is not in ['parameter_ratio', 'flops_ratio']:
             while self.get_remaining(steepness=20., budget_type=budget_type)<budget:
                 threshold-=0.0001
                 self.prune(budget, finetuning=True, budget_type=budget_type, threshold=threshold)
