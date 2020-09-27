@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from .layers import ModuleInjection, PrunableBatchNorm2d
 from .base_model import BaseModel
-
+import numpy as np
 
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -92,6 +92,7 @@ class ResNetCifar(BaseModel):
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
+        self.prev_module[self.bn1]=None
         self.activ = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(block, 16 * width, layers[0])
         self.layer2 = self._make_layer(block, 32 * width, layers[1], stride=2)
@@ -107,10 +108,10 @@ class ResNetCifar(BaseModel):
             for b in l_block:
                 self.prev_module[b.bn1] = prev
                 self.prev_module[b.bn2] = b.bn1
-                self.prev_module[b.bn2] = b.bn2
                 if b.downsample is not None:
                     self.prev_module[b.downsample[1]] = prev
-                prev = b.bn3
+                prev = b.bn2
+                
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -164,6 +165,68 @@ class ResNetCifar(BaseModel):
                     m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
                     m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
         return num_removed
+    def params(self):
+        a = [3]
+        for i in self.prunable_modules:
+            a.append(int(i.pruned_zeta.sum()))
+        ans=0
+
+        ans+=a[0]*a[1] *9 
+
+        ans+=a[1]*a[2] #--->downsample
+
+        ans+=a[1]*a[3]*9
+        ans+=a[3]*a[4]*9
+        x = max(a[2],a[4])
+
+        ans+=x*a[5]*9
+        ans+=a[5]*a[6]*9
+        x = max(a[6],x)
+
+        ans+=x*a[7]*9
+        ans+=a[7]*a[8]*9
+        x = max(a[8],x)
+
+        ans+=x*a[9]*9
+        ans+=a[9]*a[10]*9
+        x = max(a[10],x)
+
+        ans+=x*a[11] #--->downsample
+
+        ans+=x*a[12]*9
+        ans+=a[12]*a[13]*9
+        x = max(a[11],a[13])
+
+        ans+=x*a[14]*9
+        ans+=a[14]*a[15]*9
+        x = max(a[15],x)
+
+        ans+=x*a[16]*9
+        ans+=a[16]*a[17]*9
+        x = max(a[17],x)
+
+        ans+=x*a[18]*9
+        ans+=a[18]*a[19]*9
+        x = max(a[19],x)
+
+        ans+=x*a[20] #--->downsample
+
+        ans+=x*a[21]*9
+        ans+=a[21]*a[22]*9
+        x = max(a[20],a[22])
+
+        ans+=x*a[23]*9
+        ans+=a[23]*a[24]*9
+        x = max(a[24],x)
+
+        ans+=x*a[25]*9
+        ans+=a[25]*a[26]*9
+        x = max(a[26],x)
+
+        ans+=x*a[27]*9
+        ans+=a[27]*a[28]*9
+        x = max(a[28],x)
+        return (ans + a[-1]*10 + 2*np.sum(a))/52520534
     
 class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True, insize=32):

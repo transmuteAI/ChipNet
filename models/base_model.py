@@ -9,6 +9,7 @@ class BaseModel(nn.Module):
         super(BaseModel, self).__init__()
         self.prunable_modules = []
         self.prev_module = defaultdict()
+#         self.next_module = defaultdict()
         pass
     
     def set_threshold(self, threshold):
@@ -69,7 +70,7 @@ class BaseModel(nn.Module):
                 prev_total = 3 if self.prev_module[l_block] is None else self.prev_module[l_block].num_gates
                 prev_remaining = 3 if self.prev_module[l_block] is None else self.n_remaining(self.prev_module[l_block], steepness) 
                 n_rem += self.n_remaining(l_block, steepness)*prev_remaining*k*k
-                n_total += l_block.num_gates*prev_total
+                n_total += l_block.num_gates*prev_total*k*k
         return n_rem/n_total
 
     def give_zetas(self):
@@ -114,7 +115,8 @@ class BaseModel(nn.Module):
                 threshold = zetas[mid]
                 for l_block in self.prunable_modules:
                     l_block.prune(threshold)
-                if self.get_remaining(20, budget_type)<budget:
+                self.remove_orphans()
+                if self.params()<Vc:
                     high = mid-1
                 else:
                     low = mid+1
@@ -142,10 +144,10 @@ class BaseModel(nn.Module):
         self.device = device
         self(torch.rand(2,3,32,32).to(device))
         threshold = self.prune(budget, budget_type=budget_type, finetuning=True)
-        while self.get_remaining(steepness=20., budget_type=budget_type)<budget:
-            threshold-=0.0001
-            self.prune(budget, finetuning=True, budget_type=budget_type, threshold=threshold)
-
+        if budget_type != 'parameter_ratio':
+            while self.get_remaining(steepness=20., budget_type=budget_type)<budget:
+                threshold-=0.0001
+                self.prune(budget, finetuning=True, budget_type=budget_type, threshold=threshold)
         return threshold      
 
     def get_params_count(self):
