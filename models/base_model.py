@@ -31,7 +31,7 @@ class BaseModel(nn.Module):
     def calculate_prune_threshold(self, Vc, budget_type = 'channel_ratio'):
         zetas = self.give_zetas()
         if budget_type in ['volume_ratio']:
-            zeta_weights = self.give_zeta_weights(budget_type)
+            zeta_weights = self.give_zeta_weights()
             zeta_weights = zeta_weights[np.argsort(zetas)]
         zetas = sorted(zetas)
         if budget_type == 'volume_ratio':
