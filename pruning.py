@@ -17,7 +17,7 @@ seed_everything(43)
 ap = argparse.ArgumentParser(description='pruning with heaviside continuous approximations and logistic curves')
 ap.add_argument('dataset', choices=['c10', 'c100', 'tin','svhn'], type=str, help='Dataset choice')
 ap.add_argument('model', choices=['wrn', 'r32', 'r50', 'r101', 'r152', 'r164', 'vgg11', 'vgg13', 'vgg16', 'vgg19'], type=str, help='Model choice')
-ap.add_argument('--budget_type', choices=['channel_ratio', 'volume_ratio'], default='channel_ratio', type=str, help='Budget Type')
+ap.add_argument('--budget_type', choices=['channel_ratio', 'volume_ratio','parameter_ratio','flops_ratio'], default='channel_ratio', type=str, help='Budget Type')
 ap.add_argument('--Vc', default=0.25, type=float, help='Budget Constraint')
 ap.add_argument('--batch_size', default=32, type=int, help='Batch Size')
 ap.add_argument('--epochs', default=20, type=int, help='Epochs')
@@ -143,7 +143,7 @@ pruning_threshold = []
 # exact_zeros = []
 # exact_ones = []
 problems = []
-name = f'{args.model}_{args.dataset}_{str(np.round(Vc.item(),decimals=4))}_{args.budget_type}_pruned'
+name = f'{args.model}_{args.dataset}_{str(np.round(Vc.item(),decimals=6))}_{args.budget_type}_pruned'
 if args.test_only == False:
     for epoch in range(args.epochs):
         print(f'Starting epoch {epoch + 1} / {args.epochs}')

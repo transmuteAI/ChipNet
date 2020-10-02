@@ -68,6 +68,8 @@ def plot_learning_curves(logger_name):
     plt.show()
     print()
 
+
+
 def visualize_model_architecture(model, budget, budget_type):
     pruned_model = [3,]
     full_model = [3,]
