@@ -1,7 +1,7 @@
 
 # Pruning-Deep-Networks-with-heaviside-continuous-approximations-and-logistic-curves
 
-This repo official code for CHIPNET: Budget-Aware Pruning with Heaviside Continuous Approximations
+This repo is the official code for CHIPNET: Budget-Aware Pruning with Heaviside Continuous Approximations
 
 ## Prerequisites
 
