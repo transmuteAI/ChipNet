@@ -100,16 +100,16 @@ class DataManager:
         return train_loader, val_loader, test_loader
 
     def get_split(self):
-        if(os.path.exists(f'{self.dataset_name}_train_idx.npy') and os.path.exists(f'{self.dataset_name}_valid_idx.npy')):
+        if(os.path.exists(f'data_splits/{self.dataset_name}_train_idx.npy') and os.path.exists(f'data_splits/{self.dataset_name}_valid_idx.npy')):
             print('using fixed split')
-            train_idx, valid_idx = np.load(f'{self.dataset_name}_train_idx.npy'), np.load(f'{self.dataset_name}_valid_idx.npy')
+            train_idx, valid_idx = np.load(f'data_splits/{self.dataset_name}_train_idx.npy'), np.load(f'data_splits/{self.dataset_name}_valid_idx.npy')
             print(len(train_idx),len(valid_idx))
         else:
             print('creating a split')
             indices = list(range(self.num_train))
             train_idx, valid_idx = train_test_split(indices, test_size=self.valid_size)
-            np.save(f'./{self.dataset_name}_train_idx.npy',train_idx)
-            np.save(f'./{self.dataset_name}_valid_idx.npy',valid_idx)
+            np.save(f'data_splits/{self.dataset_name}_train_idx.npy',train_idx)
+            np.save(f'data_splits/{self.dataset_name}_valid_idx.npy',valid_idx)
         return train_idx, valid_idx
 
 
