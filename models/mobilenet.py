@@ -67,11 +67,10 @@ class MobileNetv1(BaseModel):
 
     def removable_orphans(self):
         num_removed = 0
-        for l_blocks in self.layers:
-            for b in l_blocks:
-                m2 = b.bn2
-                if self.is_all_pruned(m2):
-                    num_removed += self.n_remaining(m2)
+        for b in self.layers:
+            m2 = b.bn2
+            if self.is_all_pruned(m2):
+                num_removed += self.n_remaining(m2)
         return num_removed
 
     def remove_orphans(self):
