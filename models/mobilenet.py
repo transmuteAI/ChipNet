@@ -43,6 +43,7 @@ class MobileNetv1(BaseModel):
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
         self.bn1.is_imp = True
         self.layers = self._make_layers(in_planes=32)
+        self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
         self.linear = nn.Linear(1024, num_classes)
 
         self.init_weights()
@@ -59,7 +60,7 @@ class MobileNetv1(BaseModel):
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layers(out)
-        out = F.avg_pool2d(out, 2)
+        out = self.avgpool(out)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
