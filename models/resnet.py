@@ -192,7 +192,7 @@ class ResNetCifar(BaseModel):
         return ans + a[-1]*self.num_classes + 2*np.sum(a)
 
     def __calc_flops(self, a):
-        ans+=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
+        ans=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
         current_loc = 2
         current_max = a[1]
         downsample_n = a[2]
