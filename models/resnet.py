@@ -89,6 +89,7 @@ class ResNetCifar(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000):
         super(ResNetCifar, self).__init__()
         self.inplanes = 16
+        
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)

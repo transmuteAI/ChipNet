@@ -45,6 +45,8 @@ class MobileNetv1(BaseModel):
         self.layers = self._make_layers(in_planes=32)
         self.linear = nn.Linear(1024, num_classes)
 
+        self.init_weights()
+
     def _make_layers(self, in_planes):
         layers = []
         for x in self.cfg:
