@@ -86,10 +86,12 @@ class Bottleneck(nn.Module):
         return out
 
 class ResNetCifar(BaseModel):
-    def __init__(self, block, layers, width=1, num_classes=1000):
+    def __init__(self, block, layers, width=1, num_classes=1000, insize=32):
         super(ResNetCifar, self).__init__()
         self.inplanes = 16
-        
+        self.insize = insize
+        self.layers_size = layers
+        self.num_classes = num_classes
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
@@ -100,7 +102,6 @@ class ResNetCifar(BaseModel):
         self.layer3 = self._make_layer(block, 64 * width, layers[2], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
         self.fc = nn.Linear(64 * width, num_classes)
-
         self.init_weights()
 
         assert block is BasicBlock
@@ -166,132 +167,71 @@ class ResNetCifar(BaseModel):
                     m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
                     m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
         return num_removed
+
+    def __calc_params(self, a):
+        ans = a[0]*a[1]*9
+        current_loc = 2
+        current_max = a[1]
+        downsample_n = a[2]
+        for l in self.layers_size:
+            do_downsample = True
+            for i in range(l):
+                if do_downsample:
+                    downsample_n = a[current_loc]
+                    ans+=current_max*a[current_loc]
+                    current_loc+=1
+            
+                ans+=current_max*a[current_loc]*9
+                ans+=a[current_loc]*a[current_loc+1]*9
+                if do_downsample:
+                    current_max = max(downsample_n, a[current_loc+1])
+                else:
+                    current_max = max(current_max, a[current_loc+1])
+                do_downsample = False
+                current_loc+=2
+        return ans + a[-1]*self.num_classes + 2*np.sum(a)
+
+    def __calc_flops(self, a):
+        ans+=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
+        current_loc = 2
+        current_max = a[1]
+        downsample_n = a[2]
+        size = self.insize*2
+        for l in self.layers_size:
+            do_downsample = True
+            for i in range(l):
+                if do_downsample:
+                    downsample_n = a[current_loc]
+                    size = size//2
+                    ans+=(current_max+1)*a[current_loc]*size**2 
+                    current_loc+=1
+            
+                ans+=current_max*a[current_loc]*9*size**2 + a[current_loc]*size**2
+                ans+=a[current_loc]*a[current_loc+1]*9*size**2 + a[current_loc+1]*size**2
+                if do_downsample:
+                    current_max = max(downsample_n, a[current_loc+1])
+                else:
+                    current_max = max(current_max, a[current_loc+1])
+                do_downsample = False
+                current_loc+=2
+        return 2*ans + 2*(current_max-1)*100
+
     def params(self):
         a = [3]
+        b = [3]
         for i in self.prunable_modules:
             a.append(int(i.pruned_zeta.sum()))
-        ans=0
-
-        ans+=a[0]*a[1] *9 
-
-        ans+=a[1]*a[2] #--->downsample
-
-        ans+=a[1]*a[3]*9
-        ans+=a[3]*a[4]*9
-        x = max(a[2],a[4])
-
-        ans+=x*a[5]*9
-        ans+=a[5]*a[6]*9
-        x = max(a[6],x)
-
-        ans+=x*a[7]*9
-        ans+=a[7]*a[8]*9
-        x = max(a[8],x)
-
-        ans+=x*a[9]*9
-        ans+=a[9]*a[10]*9
-        x = max(a[10],x)
-
-        ans+=x*a[11] #--->downsample
-
-        ans+=x*a[12]*9
-        ans+=a[12]*a[13]*9
-        x = max(a[11],a[13])
-
-        ans+=x*a[14]*9
-        ans+=a[14]*a[15]*9
-        x = max(a[15],x)
-
-        ans+=x*a[16]*9
-        ans+=a[16]*a[17]*9
-        x = max(a[17],x)
-
-        ans+=x*a[18]*9
-        ans+=a[18]*a[19]*9
-        x = max(a[19],x)
-
-        ans+=x*a[20] #--->downsample
-
-        ans+=x*a[21]*9
-        ans+=a[21]*a[22]*9
-        x = max(a[20],a[22])
-
-        ans+=x*a[23]*9
-        ans+=a[23]*a[24]*9
-        x = max(a[24],x)
-
-        ans+=x*a[25]*9
-        ans+=a[25]*a[26]*9
-        x = max(a[26],x)
-
-        ans+=x*a[27]*9
-        ans+=a[27]*a[28]*9
-        x = max(a[28],x)
-        return (ans + a[-1]*100 + 2*np.sum(a))/52589754
+            b.append(len(i.pruned_zeta))
+        return self.__calc_params(a)/self.__calc_params(b)
+                
 
     def flops(self):
         a = [3]
+        b = [3]
         for i in self.prunable_modules:
             a.append(int(i.pruned_zeta.sum()))
-
-        ans=0
-
-        ans+=a[0]*a[1]*9*32*32 + a[1]*32*32
-        
-        ans+=a[1]*a[2]*32*32 + a[2]*32*32 #--->downsample
-
-        ans+=a[1]*a[3]*9 *32*32 + a[3]*32*32
-        ans+=a[3]*a[4]*9*32*32 + a[4]*32*32
-        x = max(a[2],a[4])
-
-        ans+=x*a[5]*9*32*32 + a[5]*32*32 
-        ans+=a[5]*a[6]*9*32*32 + a[6]*32*32
-        x = max(a[6],x)
-
-        ans+=x*a[7]*9*32*32 + a[7]*32*32
-        ans+=a[7]*a[8]*9*32*32 + a[8]*32*32
-        x = max(a[8],x)
-
-        ans+=x*a[9]*9*32*32 + a[9]*32*32
-        ans+=a[9]*a[10]*9*32*32 + a[10]*32*32
-        x = max(a[10],x)
-
-        ans+=x*a[11]*16*16 + a[11]*16*16 #--->downsample
-
-        ans+=x*a[12]*9*16*16 + a[12]*16*16
-        ans+=a[12]*a[13]*9*16*16 + a[13]*16*16
-        x = max(a[11],a[13])
-
-        ans+=x*a[14]*9*16*16 + a[14]*16*16
-        ans+=a[14]*a[15]*9*16*16 + a[15]*16*16
-        x = max(a[15],x)
-
-        ans+=x*a[16]*9*16*16 + a[16]*16*16
-        ans+=a[16]*a[17]*9*16*16 + a[17]*16*16
-        x = max(a[17],x)
-
-        ans+=x*a[18]*9*16*16 + a[18]*16*16
-        ans+=a[18]*a[19]*9*16*16 + a[19]*16*16
-        x = max(a[19],x)
-
-        ans+=x*a[20]*8*8 #--->downsample
-
-        ans+=x*a[21]*9*8*8 + a[21]*8*8
-        ans+=a[21]*a[22]*9*8*8 + a[22]*8*8
-        x = max(a[20],a[22])
-
-        ans+=x*a[23]*9*8*8 + a[23]*8*8
-        ans+=a[23]*a[24]*9*8*8 + a[24]*8*8
-        x = max(a[24],x)
-
-        ans+=x*a[25]*9*8*8 + a[25]*8*8
-        ans+=a[25]*a[26]*9*8*8 + a[26]*8*8
-        x = max(a[26],x)
-
-        ans+=x*a[27]*9*8*8 + a[27]*8*8
-        ans+=a[27]*a[28]*9*8*8 + a[28]*8*8
-        x = max(a[28],x)
-        return (2*ans + 2*(x-1)*100)/15094077240
+            b.append(len(i.pruned_zeta))
+        return self.__calc_flops(a)/self.__calc_flops(b)
     
 class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True, insize=32):
@@ -392,16 +332,16 @@ class ResNet(BaseModel):
         return num_removed
 
 
-def make_wide_resnet(num_classes):
-    model = ResNetCifar(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes)
+def make_wide_resnet(num_classes, insize):
+    model = ResNetCifar(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes, insize=insize)
     return model
 
 def make_resnet20(num_classes, insize):
-    model = ResNetCifar(BasicBlock, [3, 3, 3], width=1, num_classes=num_classes)
+    model = ResNetCifar(BasicBlock, [3, 3, 3], width=1, num_classes=num_classes, insize=insize)
     return model
 
 def make_resnet32(num_classes, insize):
-    model = ResNetCifar(BasicBlock, [5, 5, 5], width=1, num_classes=num_classes)
+    model = ResNetCifar(BasicBlock, [5, 5, 5], width=1, num_classes=num_classes, insize=insize)
     return model
 
 def make_resnet50(num_classes, insize):
@@ -409,7 +349,7 @@ def make_resnet50(num_classes, insize):
     return model
 
 def make_resnet56(num_classes, insize):
-    model = ResNetCifar(BasicBlock, [9, 9, 9], width=1, num_classes=num_classes)
+    model = ResNetCifar(BasicBlock, [9, 9, 9], width=1, num_classes=num_classes, insize=insize)
     return model
 
 def make_resnet18(num_classes, insize):
@@ -435,7 +375,7 @@ def get_resnet_model(model, method, num_classes, insize):
     ModuleInjection.pruning_method = method
     ModuleInjection.prunable_modules = []
     if model == 'wrn':
-        net = make_wide_resnet(num_classes)
+        net = make_wide_resnet(num_classes, insize)
     elif model == 'r18':
         net = make_resnet18(num_classes, insize)
     elif model == 'r20':
