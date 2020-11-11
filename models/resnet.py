@@ -92,6 +92,7 @@ class ResNetCifar(BaseModel):
         self.insize = insize
         self.layers_size = layers
         self.num_classes = num_classes
+        self.width = width
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
@@ -173,8 +174,8 @@ class ResNetCifar(BaseModel):
         current_loc = 2
         current_max = a[1]
         downsample_n = a[2]
+        do_downsample = True if self.width>1 else False
         for l in self.layers_size:
-            do_downsample = True
             for i in range(l):
                 if do_downsample:
                     downsample_n = a[current_loc]
@@ -189,6 +190,7 @@ class ResNetCifar(BaseModel):
                     current_max = max(current_max, a[current_loc+1])
                 do_downsample = False
                 current_loc+=2
+            do_downsample = True
         return ans + a[-1]*self.num_classes + 2*np.sum(a)
 
     def __calc_flops(self, a):
@@ -197,8 +199,8 @@ class ResNetCifar(BaseModel):
         current_max = a[1]
         downsample_n = a[2]
         size = self.insize*2
+        do_downsample = True if self.width>1 else False
         for l in self.layers_size:
-            do_downsample = True
             for i in range(l):
                 if do_downsample:
                     downsample_n = a[current_loc]
@@ -214,6 +216,7 @@ class ResNetCifar(BaseModel):
                     current_max = max(current_max, a[current_loc+1])
                 do_downsample = False
                 current_loc+=2
+            do_downsample = True
         return 2*ans + 2*(current_max-1)*100
 
     def params(self):
