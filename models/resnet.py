@@ -395,8 +395,20 @@ def make_wide_resnet(num_classes):
     model = ResNetCifar(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes)
     return model
 
+def make_resnet20(num_classes, insize):
+    model = ResNetCifar(BasicBlock, [3, 3, 3], width=1, num_classes=num_classes)
+    return model
+
+def make_resnet32(num_classes, insize):
+    model = ResNetCifar(BasicBlock, [5, 5, 5], width=1, num_classes=num_classes)
+    return model
+
 def make_resnet50(num_classes, insize):
     model = ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, insize=insize)
+    return model
+
+def make_resnet56(num_classes, insize):
+    model = ResNetCifar(BasicBlock, [9, 9, 9], width=1, num_classes=num_classes)
     return model
 
 def make_resnet18(num_classes, insize):
@@ -407,6 +419,9 @@ def make_resnet101(num_classes, insize):
     model = ResNet(Bottleneck, [3, 4, 23, 3], num_classes=num_classes, insize=insize)
     return model
 
+def make_resnet152(num_classes, insize):
+    model = ResNet(Bottleneck, [3, 8, 36, 3], num_classes=num_classes, insize=insize)
+    return model
 
 def get_resnet_model(model, method, num_classes, insize):
     """Returns the requested model, ready for training/pruning with the specified method.
@@ -422,9 +437,17 @@ def get_resnet_model(model, method, num_classes, insize):
         net = make_wide_resnet(num_classes)
     elif model == 'r18':
         net = make_resnet18(num_classes, insize)
+    elif model == 'r20':
+        net = make_resnet20(num_classes, insize)
+    elif model == 'r32':
+        net = make_resnet32(num_classes, insize)
     elif model == 'r50':
         net = make_resnet50(num_classes, insize)
+    elif model == 'r56':
+        net = make_resnet56(num_classes, insize)
     elif model == 'r101':
         net = make_resnet101(num_classes, insize)
+    elif model == 'r152':
+        net = make_resnet152(num_classes, insize)
     net.prunable_modules = ModuleInjection.prunable_modules
     return net
