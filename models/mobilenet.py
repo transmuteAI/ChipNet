@@ -24,7 +24,8 @@ class Block(nn.Module):
         self.conv2 = nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = nn.BatchNorm2d(out_planes)
         self.conv2, self.bn2 = ModuleInjection.make_prunable(self.conv2, self.bn2)
-        self.bn2.is_imp = True
+        if hasattr(self.bn2, 'is_imp'):
+            self.bn2.is_imp = True
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
@@ -41,7 +42,8 @@ class MobileNetv1(BaseModel):
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(32)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
-        self.bn1.is_imp = True
+        if hasattr(self.bn1, 'is_imp'):
+            self.bn1.is_imp = True
         self.layers = self._make_layers(in_planes=32)
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
         self.linear = nn.Linear(1024, num_classes)
