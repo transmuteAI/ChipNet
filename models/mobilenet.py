@@ -51,7 +51,7 @@ class Block(nn.Module):
         return out
 
 
-class MobileNetv2(nn.Module):
+class MobileNetv2(BaseModel):
     # (expansion, out_planes, num_blocks, stride)
     cfg = [(1,  16, 1, 1),
            (6,  24, 2, 1),  # NOTE: change stride 2 -> 1 for CIFAR10
