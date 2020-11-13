@@ -34,7 +34,7 @@ class Block(nn.Module):
         self.shortcut = nn.Sequential()
         if stride == 1 and in_planes != out_planes:
             conv_module = nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
-            bn_module = nn.BatchNorm2d(out_planes),
+            bn_module = nn.BatchNorm2d(out_planes)
             conv_module, bn_module = ModuleInjection.make_prunable(conv_module, bn_module)
             if hasattr(bn_module, 'is_imp'):
                 bn_module.is_imp = True
