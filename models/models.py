@@ -14,6 +14,6 @@ def get_model(model, method, num_classes, insize):
         net = get_resnet_model(model, method, num_classes, insize)
     elif model in ['r164']:
         net = get_network_slimming_model(method, num_classes)
-    elif model in ['mobilenetv1']:
+    elif model in ['mobilenetv2']:
         net = get_mobilenet(model, method, num_classes)
     return net
