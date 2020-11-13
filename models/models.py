@@ -10,7 +10,7 @@ def get_model(model, method, num_classes, insize):
     :return: A prunable model
     """
 
-    if model in ['wrn', 'r50', 'r101', 'r152', 'r32', 'r18', 'r56', 'r20']:
+    if model in ['wrn', 'r50', 'r101','r110', 'r152', 'r32', 'r18', 'r56', 'r20']:
         net = get_resnet_model(model, method, num_classes, insize)
     elif model in ['r164']:
         net = get_network_slimming_model(method, num_classes)
