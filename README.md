@@ -17,31 +17,25 @@ The main script offers many options; here are the most important ones:
 ### Pretraining
 
 ```
-usage: python pretraining.py [c10, c100, tin] [wrn, r50, r101]
+usage: python pretraining.py [dataset] [model name] --epochs [number of epochs] --decay [weight decay] --batch_size [batch size] --lr [learning rate] --scheduler_type {1, 2}
 ```
-```
-usage: python pretraining.py [c10, c100] [r164] --epochs 160 --decay 0.001 --batch_size 64 --lr 0.1 --scheduler_type 2
-```
+
 ### Pruning
 ```
-usage: python pruning.py [c10, c100, tin] [wrn] --Vc {float value between 0-1} --budget_type {channel_ratio, volume_ratio, parameter_ratio, flops_ratio} --epochs 20
+usage: python pruning.py [dataset] [model name] --Vc {float value between 0-1} --budget_type {channel_ratio, volume_ratio, parameter_ratio, flops_ratio} --epochs 20
 ```
 
 ### Finetuning
 ```
-usage: python finetuning.py [c10, c100, tin] [wrn, r50, r101] --Vc {float value between 0-1} --budget_type {channel_ratio, volume_ratio, parameter_ratio, flops_ratio} --name {model name}_{dataset}_{budget}_{budget_type}
+usage: python finetuning.py [dataset] [model name] --Vc {float value between 0-1} --budget_type {channel_ratio, volume_ratio, parameter_ratio, flops_ratio} --name {model name}_{dataset}_{budget}_{budget_type} --epochs [number of epochs] --decay [weight decay] --batch_size [batch size] --lr [learning rate] --scheduler_type {1, 2}
 ```
-```
-usage: python finetuning.py [c10, c100, tin] [r164] --Vc {float value between 0-1} --budget_type {channel_ratio, volume_ratio, parameter_ratio, flops_ratio} --name {model name}_{dataset}_{budget}_{budget_type} --epochs 160 --decay 0.001 --batch_size 64 --lr 0.1 --scheduler_type 2
-```
+
 ### Mask Transfer
 ```
-usage: python finetuning.py [c10, c100, tin] [wrn, r50, r101] --Vc {float value between 0-1} --budget_type {channel_ratio, volume_ratio, parameter_ratio, flops_ratio} --host_name {model name}_{dataset}_{budget}_{budget_type}
+usage: python finetuning.py [dataset] [model name] --Vc {float value between 0-1} --budget_type {channel_ratio, volume_ratio, parameter_ratio, flops_ratio} --host_name {model name}_{dataset}_{budget}_{budget_type} --epochs [number of epochs] --decay [weight decay] --batch_size [batch size] --lr [learning rate] --scheduler_type {1, 2}
 ```
-```
-usage: python finetuning.py [c10, c100, tin] [r164] --Vc {float value between 0-1} --budget_type {channel_ratio, volume_ratio, parameter_ratio, flops_ratio} --host_name {model name}_{dataset}_{budget}_{budget_type} --epochs 160 --decay 0.001 --batch_size 64 --lr 0.1 --scheduler_type 2
-```
+
 
 
 ***
-* Parameter and FLOPs budget is supported only with WRN for now.
+* Parameter and FLOPs budget is supported only with models using ResNetCifar module for now.
