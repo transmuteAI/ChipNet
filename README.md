@@ -36,6 +36,5 @@ usage: python finetuning.py [dataset] [model name] --Vc {float value between 0-1
 ```
 
 
-
 ***
 * Parameter and FLOPs budget is supported only with models using ResNetCifar module for now.
