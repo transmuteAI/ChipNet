@@ -23,10 +23,14 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
     
     def forward(self, input):
         out = super(PrunableBatchNorm2d, self).forward(input)
-        z = self.pruned_zeta if self.is_pruned else self.get_zeta_t()
+        z = self.get_binary_zetas()
         out *= z[None, :, None, None] # broadcast the mask to all samples in the batch, and all locations
         return out
     
+    def get_binary_zetas(self):
+        z = self.get_zeta_t()
+        return Binarize().apply(z, self.beta, self.gamma)
+
     def get_zeta_i(self):
         return self.__generalized_logistic(self.zeta)
     
@@ -39,7 +43,7 @@ class PrunableBatchNorm2d(torch.nn.BatchNorm2d):
         self.gamma.data.copy_(torch.Tensor([gamma]))
       
     def __generalized_logistic(self, x):
-        return 1./(1.+torch.exp(-self.beta*x))
+        return torch.sigmoid(self.beta*x)
     
     def __continous_heavy_side(self, x):
         return 1-torch.exp(-self.gamma*x)+x*torch.exp(-self.gamma)
@@ -96,3 +100,16 @@ class ModuleInjection:
         new_bn, conv_module = PrunableBatchNorm2d.from_batchnorm(bn_module, conv_module=conv_module)
         ModuleInjection.prunable_modules.append(new_bn)
         return conv_module, new_bn
+
+class Binarize(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input, beta, gamma):
+        ctx.save_for_backward(input, beta, gamma)
+        out = (input>0.5).float()
+        return out
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, beta, gamma = ctx.saved_tensors
+        grad_input = grad_output
+        return grad_input, None, None
