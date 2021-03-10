@@ -64,13 +64,11 @@ if os.path.exists('checkpoints') == False:
 
 weightage1 = args.w1 #weightage given to budget loss
 weightage2 = args.w2 #weightage given to crispness loss
-steepness = 10. # steepness of gate_approximator
 
 CE = nn.CrossEntropyLoss()
 def criterion(model, y_pred, y_true):
-    global steepness
     ce_loss = CE(y_pred, y_true)
-    budget_loss = ((model.get_remaining(steepness, args.budget_type).to(device)-Vc.to(device))**2).to(device)
+    budget_loss = ((model.get_remaining(args.budget_type).to(device)-Vc.to(device))**2).to(device)
     crispness_loss =  model.get_crispnessLoss(device)
     return budget_loss*weightage1 + crispness_loss*weightage2 + ce_loss
 
@@ -87,7 +85,6 @@ model.to(device)
 Vc.to(device)
 
 def train(model, loss_fn, optimizer, epoch):
-    global steepness
     model.train()
     counter = 0
     tk1 = tqdm_notebook(dataloaders['train'], total=len(dataloaders['train']))
@@ -103,7 +100,6 @@ def train(model, loss_fn, optimizer, epoch):
         running_loss+=loss.item()
         tk1.set_postfix(loss=running_loss/counter)
         optimizer.step()
-        steepness=min(60,steepness+5./len(tk1))
     return running_loss/counter
 
 def test(model, loss_fn, optimizer, phase, epoch):
@@ -135,13 +131,8 @@ best_acc = 0
 beta, gamma = 1., 2.
 model.set_beta_gamma(beta, gamma)
 
-remaining_before_pruning = []
 remaining_after_pruning = []
 valid_accuracy = []
-pruning_accuracy = []
-pruning_threshold = []
-# exact_zeros = []
-# exact_ones = []
 problems = []
 name = f'{args.model}_{args.dataset}_{str(np.round(Vc.item(),decimals=6))}_{args.budget_type}_pruned'
 if args.test_only == False:
@@ -149,30 +140,20 @@ if args.test_only == False:
         print(f'Starting epoch {epoch + 1} / {args.epochs}')
         model.unprune()
         train(model, criterion, optimizer, epoch)
-        print(f'[{epoch + 1} / {args.epochs}] Validation before pruning')
+        print(f'[{epoch + 1} / {args.epochs}] Validation')
         acc = test(model, criterion, optimizer, "val", epoch)
-        remaining = model.get_remaining(steepness, args.budget_type).item()
-        remaining_before_pruning.append(remaining)
-        valid_accuracy.append(acc)
-        # exactly_zeros, exactly_ones = model.plot_zt()
-        # exact_zeros.append(exactly_zeros)
-        # exact_ones.append(exactly_ones)
-        
-        print(f'[{epoch + 1} / {args.epochs}] Validation after pruning')
-        threshold, problem = model.prune(args.Vc, args.budget_type)
-        # acc = test(model, criterion, optimizer, "val", epoch)
-        remaining = model.get_remaining(steepness, args.budget_type).item()
-        pruning_accuracy.append(acc)
-        pruning_threshold.append(threshold)
+        problem = model.prune(args.Vc, args.budget_type)
+        remaining = model.get_remaining(args.budget_type).item()
+
         remaining_after_pruning.append(remaining)
+        valid_accuracy.append(acc)
         problems.append(problem)
-        
-        # 
+
         beta=min(6., beta+(0.1/args.b_inc))
         gamma=min(256, gamma*(2**(1./args.g_inc)))
         model.set_beta_gamma(beta, gamma)
-        print("Changed beta to", beta, "changed gamma to", gamma)     
-        
+        print("Changed beta to", beta, "changed gamma to", gamma)
+
         if acc>best_acc:
             print("**Saving checkpoint**")
             best_acc=acc
@@ -185,6 +166,6 @@ if args.test_only == False:
                 "accuracy" : acc,
             }, f"checkpoints/{name}.pth")
 
-        df_data=np.array([remaining_before_pruning, remaining_after_pruning, valid_accuracy, pruning_accuracy, pruning_threshold, problems]).T
-        df = pd.DataFrame(df_data,columns = ['Remaining before pruning', 'Remaining after pruning', 'Valid accuracy', 'Pruning accuracy', 'Pruning threshold', 'problems'])
+        df_data=np.array([remaining_after_pruning, valid_accuracy, problems]).T
+        df = pd.DataFrame(df_data,columns = ['Remaining after pruning', 'Valid accuracy', 'problems'])
         df.to_csv(f"logs/{name}.csv")
