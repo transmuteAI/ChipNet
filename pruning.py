@@ -161,7 +161,6 @@ if args.test_only == False:
                 "epoch" : epoch+1,
                 "beta" : beta,
                 "gamma" : gamma,
-                "prune_threshold":threshold,
                 "state_dict" : model.state_dict(),
                 "accuracy" : acc,
             }, f"checkpoints/{name}.pth")
