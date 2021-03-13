@@ -75,7 +75,7 @@ def criterion(model, y_pred, y_true):
 param_optimizer = list(model.named_parameters())
 no_decay = ["zeta"]
 optimizer_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr},
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr/10},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0,'lr':args.lr},
     ]
 optimizer = optim.AdamW(optimizer_parameters)
