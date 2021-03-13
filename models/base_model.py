@@ -8,7 +8,6 @@ class BaseModel(nn.Module):
     def __init__(self):
         super(BaseModel, self).__init__()
         self.prunable_modules = []
-        pass
         
     def init_weights(self):
         for m in self.modules():
@@ -38,7 +37,7 @@ class BaseModel(nn.Module):
                 n_rem += self.n_remaining(l_block)
                 n_total += l_block.num_gates
             else:
-                ValueError("Budget not defined!")
+                raise ValueError("Budget not defined!")
         return n_rem/n_total
 
     def give_zetas(self):
@@ -58,7 +57,7 @@ class BaseModel(nn.Module):
     def prune(self, Vc, budget_type = 'channel_ratio', finetuning=False):
         """prunes the network to make zeta exactly 1 and 0"""
         if budget_type != 'channel_ratio':
-            ValueError("Budget not defined!")
+            raise ValueError("Budget not defined!")
 
         for l_block in self.prunable_modules:
             l_block.prune()

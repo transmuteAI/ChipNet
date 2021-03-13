@@ -9,6 +9,7 @@ def continous_heavy_side(x, gamma):
 
 class PrunableBatchNorm2d(nn.BatchNorm2d):
     def __init__(self, num_features):
+        super(PrunableBatchNorm2d, self).__init__(num_features=num_features)
         self.is_imp = False
         self.is_pruned = False
         self.num_gates = num_features

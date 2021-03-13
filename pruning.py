@@ -29,8 +29,8 @@ ap.add_argument('--test_only','-t', default=False, type=bool, help='Testing')
 ap.add_argument('--decay', default=0.001, type=float, help='Weight decay')
 ap.add_argument('--w1', default=30., type=float, help='weightage to budget loss')
 ap.add_argument('--w2', default=10., type=float, help='weightage to crispness loss')
-ap.add_argument('--b_inc', default=5., type=float, help='beta increment')
-ap.add_argument('--g_inc', default=2., type=float, help='gamma increment')
+ap.add_argument('--b_inc', default=1., type=float, help='beta increment')
+ap.add_argument('--g_inc', default=10., type=float, help='gamma increment')
 
 ap.add_argument('--cuda_id', '-id', type=str, default='0', help='gpu number')
 args = ap.parse_args()
@@ -128,7 +128,7 @@ def test(model, loss_fn, optimizer, phase, epoch):
     return running_acc/total
 
 best_acc = 0
-beta, gamma = 1., 2.
+beta, gamma = 1., 1.
 model.set_beta_gamma(beta, gamma)
 
 remaining_after_pruning = []
@@ -150,7 +150,7 @@ if args.test_only == False:
         problems.append(problem)
 
         beta=min(6., beta+(0.1/args.b_inc))
-        gamma=min(256, gamma*(2**(1./args.g_inc)))
+        gamma=min(8, gamma*(2**(1./args.g_inc)))
         model.set_beta_gamma(beta, gamma)
         print("Changed beta to", beta, "changed gamma to", gamma)
 
@@ -161,7 +161,6 @@ if args.test_only == False:
                 "epoch" : epoch+1,
                 "beta" : beta,
                 "gamma" : gamma,
-                "prune_threshold":threshold,
                 "state_dict" : model.state_dict(),
                 "accuracy" : acc,
             }, f"checkpoints/{name}.pth")
