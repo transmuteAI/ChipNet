@@ -38,7 +38,7 @@ class BaseModel(nn.Module):
                 n_total += l_block.num_gates
             else:
                 raise ValueError("Budget not defined!")
-        return n_rem/n_total
+        return (n_rem-self.removable_orphans())/n_total
 
     def give_zetas(self):
         zetas = []
