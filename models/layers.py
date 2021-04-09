@@ -22,7 +22,7 @@ class PrunableBatchNorm2d(nn.BatchNorm2d):
 
     def forward(self, input):
         out = super(PrunableBatchNorm2d, self).forward(input)
-        z = self.pruned_zeta if self.is_pruned else self.get_zeta_t()
+        z = self.pruned_zeta if self.is_pruned else self.get_binary_zetas()
         out *= z[None, :, None, None] # broadcast the mask to all samples in the batch, and all locations
         return out
 
