@@ -27,11 +27,14 @@ class PrunableBatchNorm2d(nn.BatchNorm2d):
         return out
 
     def get_zeta_i(self):
-        return generalized_logistic(self.zeta, 100)
+        return generalized_logistic(self.zeta, self.beta)
 
     def get_zeta_t(self):
         zeta_i = self.get_zeta_i()
         return zeta_i ########REMOVED Continous Heaviside#######
+
+    def get_binary_zetas(self):
+        return Binarize().apply(self.get_zeta_t())
 
     def set_beta_gamma(self, beta, gamma):
         self.beta.data.copy_(torch.Tensor([beta]))
@@ -68,3 +71,15 @@ class ModuleInjection:
         new_bn, conv_module = PrunableBatchNorm2d.from_batchnorm(bn_module, conv_module=conv_module)
         ModuleInjection.prunable_modules.append(new_bn)
         return conv_module, new_bn
+
+class Binarize(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input):
+        ctx.save_for_backward(input)
+        out = (input>0.5).float()
+        return out
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output, None, None
+

@@ -76,7 +76,7 @@ param_optimizer = list(model.named_parameters())
 no_decay = ["zeta"]
 optimizer_parameters = [
         {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr},
+        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': args.decay*10,'lr':args.lr},
     ]
 optimizer = optim.AdamW(optimizer_parameters)
 
@@ -155,8 +155,8 @@ def test(model, loss_fn, optimizer, phase, epoch):
     return running_acc/total
 
 best_acc = 0
-# beta, gamma = 1., 1.
-# model.set_beta_gamma(beta, gamma)
+beta, gamma = 1., 1.
+model.set_beta_gamma(beta, gamma)
 
 remaining_after_pruning = []
 valid_accuracy = []

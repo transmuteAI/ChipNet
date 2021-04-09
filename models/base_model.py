@@ -23,7 +23,7 @@ class BaseModel(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def n_remaining(self, m):
-        return (m.pruned_zeta if m.is_pruned else m.get_zeta_t()).sum()
+        return (m.get_binary_zetas()).sum()
     
     def is_all_pruned(self, m):
         return self.n_remaining(m) == 0
