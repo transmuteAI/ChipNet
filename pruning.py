@@ -27,10 +27,10 @@ ap.add_argument('--lr', default=0.001, type=float, help='Learning rate')
 ap.add_argument('--test_only','-t', default=False, type=bool, help='Testing')
 
 ap.add_argument('--decay', default=0.001, type=float, help='Weight decay')
-ap.add_argument('--w1', default=30., type=float, help='weightage to budget loss')
-ap.add_argument('--w2', default=10., type=float, help='weightage to crispness loss')
-ap.add_argument('--b_inc', default=1., type=float, help='beta increment')
-ap.add_argument('--g_inc', default=10., type=float, help='gamma increment')
+ap.add_argument('--w1', default=1., type=float, help='weightage to budget loss')
+ap.add_argument('--w2', default=0., type=float, help='weightage to crispness loss')
+# ap.add_argument('--b_inc', default=1., type=float, help='beta increment')
+# ap.add_argument('--g_inc', default=10., type=float, help='gamma increment')
 
 ap.add_argument('--cuda_id', '-id', type=str, default='0', help='gpu number')
 args = ap.parse_args()
@@ -75,8 +75,8 @@ def criterion(model, y_pred, y_true):
 param_optimizer = list(model.named_parameters())
 no_decay = ["zeta"]
 optimizer_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr/10},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0,'lr':args.lr},
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr},
+        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': args.decay,'lr':args.lr},
     ]
 optimizer = optim.AdamW(optimizer_parameters)
 
@@ -98,6 +98,31 @@ def train(model, loss_fn, optimizer, epoch):
         optimizer.zero_grad()
         loss.backward()
         running_loss+=loss.item()
+        tk1.set_postfix(loss=running_loss/counter)
+        optimizer.step()
+    return running_loss/counter
+
+def train_bilevel(model, loss_fn, optimizer, epoch):
+    model.train()
+    counter = 0
+    tk1 = tqdm_notebook(dataloaders['train'], total=len(dataloaders['train']))
+    running_loss = 0
+    for x_var, y_var in tk1:
+        optimizer.zero_grad()
+        counter +=1
+        x_var = x_var.to(device=device)
+        y_var = y_var.to(device=device)
+        problem = model.prune(args.Vc, args.budget_type)
+        scores1 = model(x_var)
+        loss1 = loss_fn(model,scores1, y_var)
+        loss1.backward()
+        model.requires_grad = False
+        model.unprune()
+        scores2 = model(x_var)
+        loss2 = loss_fn(model,scores2, y_var)
+        loss2.backward()
+        model.requires_grad = True
+        running_loss+=loss1.item()
         tk1.set_postfix(loss=running_loss/counter)
         optimizer.step()
     return running_loss/counter
@@ -128,8 +153,8 @@ def test(model, loss_fn, optimizer, phase, epoch):
     return running_acc/total
 
 best_acc = 0
-beta, gamma = 1., 1.
-model.set_beta_gamma(beta, gamma)
+# beta, gamma = 1., 1.
+# model.set_beta_gamma(beta, gamma)
 
 remaining_after_pruning = []
 valid_accuracy = []
@@ -141,26 +166,26 @@ if args.test_only == False:
         model.unprune()
         train(model, criterion, optimizer, epoch)
         print(f'[{epoch + 1} / {args.epochs}] Validation')
-        acc = test(model, criterion, optimizer, "val", epoch)
         problem = model.prune(args.Vc, args.budget_type)
+        acc = test(model, criterion, optimizer, "val", epoch)
         remaining = model.get_remaining(args.budget_type).item()
 
         remaining_after_pruning.append(remaining)
         valid_accuracy.append(acc)
         problems.append(problem)
 
-        beta=min(6., beta+(0.1/args.b_inc))
-        gamma=min(8, gamma*(2**(1./args.g_inc)))
-        model.set_beta_gamma(beta, gamma)
-        print("Changed beta to", beta, "changed gamma to", gamma)
+        # beta=min(6., beta+(0.1/args.b_inc))
+        # gamma=min(8, gamma*(2**(1./args.g_inc)))
+        # model.set_beta_gamma(beta, gamma)
+        # print("Changed beta to", beta, "changed gamma to", gamma)
 
         if acc>best_acc:
             print("**Saving checkpoint**")
             best_acc=acc
             torch.save({
                 "epoch" : epoch+1,
-                "beta" : beta,
-                "gamma" : gamma,
+                # "beta" : beta,
+                # "gamma" : gamma,
                 "state_dict" : model.state_dict(),
                 "accuracy" : acc,
             }, f"checkpoints/{name}.pth")
