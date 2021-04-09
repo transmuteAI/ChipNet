@@ -14,6 +14,14 @@ def seed_everything(seed):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
 
+def freeze_model(model):
+    for param in model.parameters():
+        param.requires_grad = False
+        
+def unfreeze_model(model):
+    for param in model.parameters():
+        param.requires_grad = True
+        
 def get_mask_dict(own_state, state_dict):
     for name, param in state_dict.items():
         if name not in own_state:
