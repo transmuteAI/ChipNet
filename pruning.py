@@ -106,7 +106,8 @@ def train_bilevel(model, loss_fn, optimizer, epoch):
     model.train()
     counter = 0
     tk1 = tqdm_notebook(dataloaders['train'], total=len(dataloaders['train']))
-    running_loss = 0
+    running_loss1 = 0
+    running_loss2 = 0
     for x_var, y_var in tk1:
         optimizer.zero_grad()
         counter +=1
@@ -122,10 +123,11 @@ def train_bilevel(model, loss_fn, optimizer, epoch):
         loss2 = loss_fn(model,scores2, y_var)
         loss2.backward()
         model.requires_grad = True
-        running_loss+=loss1.item()
-        tk1.set_postfix(loss=running_loss/counter)
+        running_loss1+=loss1.item()
+        running_loss2+=loss2.item()
+        tk1.set_postfix(loss1=running_loss1/counter, loss2=running_loss2/counter)
         optimizer.step()
-    return running_loss/counter
+    return running_loss1/counter, running_loss2/counter
 
 def test(model, loss_fn, optimizer, phase, epoch):
     model.eval()
@@ -164,7 +166,7 @@ if args.test_only == False:
     for epoch in range(args.epochs):
         print(f'Starting epoch {epoch + 1} / {args.epochs}')
         model.unprune()
-        train(model, criterion, optimizer, epoch)
+        train_bilevel(model, criterion, optimizer, epoch)
         print(f'[{epoch + 1} / {args.epochs}] Validation')
         problem = model.prune(args.Vc, args.budget_type)
         acc = test(model, criterion, optimizer, "val", epoch)
