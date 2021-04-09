@@ -71,6 +71,11 @@ class BaseModel(nn.Module):
     def unprune(self):
         for l_block in self.prunable_modules:
             l_block.unprune()
+
+    def freeze_weights(self):
+        self.requires_grad = False
+        for l_block in self.prunable_modules:
+            l_block.unprune
     
     def prepare_for_finetuning(self, device, budget, budget_type = 'channel_ratio'):
         """freezes zeta"""
