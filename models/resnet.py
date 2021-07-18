@@ -12,6 +12,7 @@ def conv3x3(in_planes, out_planes, stride=1):
 
 class BasicBlock(nn.Module):
     expansion = 1
+    name = "BasicBlock"
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
@@ -46,6 +47,7 @@ class BasicBlock(nn.Module):
 
 class Bottleneck(nn.Module):
     expansion = 4
+    name = "Bottleneck"
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
@@ -85,169 +87,173 @@ class Bottleneck(nn.Module):
 
         return out
 
-class ResNetCifar(BaseModel):
-    def __init__(self, block, layers, width=1, num_classes=1000, insize=32):
-        super(ResNetCifar, self).__init__()
-        self.inplanes = 16
-        self.insize = insize
-        self.layers_size = layers
-        self.num_classes = num_classes
-        self.width = width
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(16)
-        self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
-        self.prev_module[self.bn1]=None
-        self.activ = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(block, 16 * width, layers[0])
-        self.layer2 = self._make_layer(block, 32 * width, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 64 * width, layers[2], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
-        self.fc = nn.Linear(64 * width, num_classes)
-        self.init_weights()
+# class ResNetCifar(BaseModel):
+#     def __init__(self, block, layers, width=1, num_classes=1000, insize=32):
+#         super(ResNetCifar, self).__init__()
+#         self.inplanes = 16
+#         self.insize = insize
+#         self.layers_size = layers
+#         self.num_classes = num_classes
+#         self.width = width
+#         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+#         self.bn1 = nn.BatchNorm2d(16)
+#         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
+#         self.prev_module[self.bn1]=None
+#         self.activ = nn.ReLU(inplace=True)
+#         self.layer1 = self._make_layer(block, 16 * width, layers[0])
+#         self.layer2 = self._make_layer(block, 32 * width, layers[1], stride=2)
+#         self.layer3 = self._make_layer(block, 64 * width, layers[2], stride=2)
+#         self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)
+#         self.fc = nn.Linear(64 * width, num_classes)
+#         self.init_weights()
 
-        assert block is BasicBlock
-        prev = self.bn1
-        for l_block in [self.layer1, self.layer2, self.layer3]:
-            for b in l_block:
-                self.prev_module[b.bn1] = prev
-                self.prev_module[b.bn2] = b.bn1
-                if b.downsample is not None:
-                    self.prev_module[b.downsample[1]] = prev
-                prev = b.bn2
+#         assert block is BasicBlock
+#         prev = self.bn1
+#         for l_block in [self.layer1, self.layer2, self.layer3]:
+#             for b in l_block:
+#                 self.prev_module[b.bn1] = prev
+#                 self.prev_module[b.bn2] = b.bn1
+#                 if b.downsample is not None:
+#                     self.prev_module[b.downsample[1]] = prev
+#                 prev = b.bn2
                 
 
-    def _make_layer(self, block, planes, blocks, stride=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            conv_module = nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False)
-            bn_module = nn.BatchNorm2d(planes * block.expansion)
-            conv_module, bn_module = ModuleInjection.make_prunable(conv_module, bn_module)
-            if hasattr(bn_module, 'is_imp'):
-                bn_module.is_imp = True
-            downsample = nn.Sequential(conv_module, bn_module)
+#     def _make_layer(self, block, planes, blocks, stride=1):
+#         downsample = None
+#         if stride != 1 or self.inplanes != planes * block.expansion:
+#             conv_module = nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False)
+#             bn_module = nn.BatchNorm2d(planes * block.expansion)
+#             conv_module, bn_module = ModuleInjection.make_prunable(conv_module, bn_module)
+#             if hasattr(bn_module, 'is_imp'):
+#                 bn_module.is_imp = True
+#             downsample = nn.Sequential(conv_module, bn_module)
 
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
+#         layers = []
+#         layers.append(block(self.inplanes, planes, stride, downsample))
+#         self.inplanes = planes * block.expansion
+#         for i in range(1, blocks):
+#             layers.append(block(self.inplanes, planes))
 
-        return nn.Sequential(*layers)
+#         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.activ(x)
+#     def forward(self, x):
+#         x = self.conv1(x)
+#         x = self.bn1(x)
+#         x = self.activ(x)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
+#         x = self.layer1(x)
+#         x = self.layer2(x)
+#         x = self.layer3(x)
 
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
+#         x = self.avgpool(x)
+#         x = x.view(x.size(0), -1)
+#         x = self.fc(x)
         
-        return x
+#         return x
 
-    def removable_orphans(self):
-        num_removed = 0
-        for l_blocks in [self.layer1, self.layer2, self.layer3]:
-            for b in l_blocks:
-                m1, m2 = b.bn1, b.bn2
-                if self.is_all_pruned(m1) or self.is_all_pruned(m2):
-                    num_removed += self.n_remaining(m1) + self.n_remaining(m2)
-        return num_removed
+#     def removable_orphans(self):
+#         num_removed = 0
+#         for l_blocks in [self.layer1, self.layer2, self.layer3]:
+#             for b in l_blocks:
+#                 m1, m2 = b.bn1, b.bn2
+#                 if self.is_all_pruned(m1) or self.is_all_pruned(m2):
+#                     num_removed += self.n_remaining(m1) + self.n_remaining(m2)
+#         return num_removed
 
-    def remove_orphans(self):
-        num_removed = 0
-        for l_blocks in [self.layer1, self.layer2, self.layer3]:
-            for b in l_blocks:
-                m1, m2 = b.bn1, b.bn2
-                if self.is_all_pruned(m1) or self.is_all_pruned(m2):
-                    num_removed += self.n_remaining(m1) + self.n_remaining(m2)
-                    m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
-                    m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
-        return num_removed
+#     def remove_orphans(self):
+#         num_removed = 0
+#         for l_blocks in [self.layer1, self.layer2, self.layer3]:
+#             for b in l_blocks:
+#                 m1, m2 = b.bn1, b.bn2
+#                 if self.is_all_pruned(m1) or self.is_all_pruned(m2):
+#                     num_removed += self.n_remaining(m1) + self.n_remaining(m2)
+#                     m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
+#                     m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
+#         return num_removed
 
-    def __calc_params(self, a):
-        ans = a[0]*a[1]*9
-        current_loc = 2
-        current_max = a[1]
-        downsample_n = a[2]
-        do_downsample = True if self.width>1 else False
-        for l in self.layers_size:
-            for i in range(l):
-                if do_downsample:
-                    downsample_n = a[current_loc]
-                    ans+=current_max*a[current_loc]
-                    current_loc+=1
+#     def __calc_params(self, a):
+#         ans = a[0]*a[1]*9
+#         current_loc = 2
+#         current_max = a[1]
+#         downsample_n = a[2]
+#         do_downsample = True if self.width>1 else False
+#         for l in self.layers_size:
+#             for i in range(l):
+#                 if do_downsample:
+#                     downsample_n = a[current_loc]
+#                     ans+=current_max*a[current_loc]
+#                     current_loc+=1
             
-                ans+=current_max*a[current_loc]*9
-                ans+=a[current_loc]*a[current_loc+1]*9
-                if do_downsample:
-                    current_max = max(downsample_n, a[current_loc+1])
-                else:
-                    current_max = max(current_max, a[current_loc+1])
-                do_downsample = False
-                current_loc+=2
-            do_downsample = True
-        return ans + a[-1]*self.num_classes + 2*np.sum(a)
+#                 ans+=current_max*a[current_loc]*9
+#                 ans+=a[current_loc]*a[current_loc+1]*9
+#                 if do_downsample:
+#                     current_max = max(downsample_n, a[current_loc+1])
+#                 else:
+#                     current_max = max(current_max, a[current_loc+1])
+#                 do_downsample = False
+#                 current_loc+=2
+#             do_downsample = True
+#         return ans + a[-1]*self.num_classes + 2*np.sum(a)
 
-    def __calc_flops(self, a):
-        ans=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
-        current_loc = 2
-        current_max = a[1]
-        downsample_n = a[2]
-        size = self.insize*2
-        do_downsample = True if self.width>1 else False
-        for l in self.layers_size:
-            for i in range(l):
-                if do_downsample:
-                    downsample_n = a[current_loc]
-                    size = size//2
-                    ans+=(current_max+1)*a[current_loc]*size**2 
-                    current_loc+=1
+#     def __calc_flops(self, a):
+#         ans=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
+#         current_loc = 2
+#         current_max = a[1]
+#         downsample_n = a[2]
+#         size = self.insize*2
+#         do_downsample = True if self.width>1 else False
+#         for l in self.layers_size:
+#             for i in range(l):
+#                 if do_downsample:
+#                     downsample_n = a[current_loc]
+#                     size = size//2
+#                     ans+=(current_max+1)*a[current_loc]*size**2 
+#                     current_loc+=1
             
-                ans+=current_max*a[current_loc]*9*size**2 + a[current_loc]*size**2
-                ans+=a[current_loc]*a[current_loc+1]*9*size**2 + a[current_loc+1]*size**2
-                if do_downsample:
-                    current_max = max(downsample_n, a[current_loc+1])
-                else:
-                    current_max = max(current_max, a[current_loc+1])
-                do_downsample = False
-                current_loc+=2
-            do_downsample = True
-        return 2*ans + 2*(current_max-1)*100
+#                 ans+=current_max*a[current_loc]*9*size**2 + a[current_loc]*size**2
+#                 ans+=a[current_loc]*a[current_loc+1]*9*size**2 + a[current_loc+1]*size**2
+#                 if do_downsample:
+#                     current_max = max(downsample_n, a[current_loc+1])
+#                 else:
+#                     current_max = max(current_max, a[current_loc+1])
+#                 do_downsample = False
+#                 current_loc+=2
+#             do_downsample = True
+#         return 2*ans + 2*(current_max-1)*100
 
-    def params(self):
-        a = [3]
-        b = [3]
-        for i in self.prunable_modules:
-            a.append(int(i.pruned_zeta.sum()))
-            b.append(len(i.pruned_zeta))
-        return self.__calc_params(a)/self.__calc_params(b)
+#     def params(self):
+#         a = [3]
+#         b = [3]
+#         for i in self.prunable_modules:
+#             a.append(int(i.pruned_zeta.sum()))
+#             b.append(len(i.pruned_zeta))
+#         return self.__calc_params(a)/self.__calc_params(b)
                 
 
-    def flops(self):
-        a = [3]
-        b = [3]
-        for i in self.prunable_modules:
-            a.append(int(i.pruned_zeta.sum()))
-            b.append(len(i.pruned_zeta))
-        return self.__calc_flops(a)/self.__calc_flops(b)
+#     def flops(self):
+#         a = [3]
+#         b = [3]
+#         for i in self.prunable_modules:
+#             a.append(int(i.pruned_zeta.sum()))
+#             b.append(len(i.pruned_zeta))
+#         return self.__calc_flops(a)/self.__calc_flops(b)
     
 class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True, insize=32):
         super(ResNet, self).__init__()
+        self.insize=insize
+        self.width = width
         self.produce_vectors = produce_vectors
         self.block_type = block.__class__.__name__
         self.inplanes = 64
+        self.layers_size = layers
         if insize<128:
             self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         else:
             self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
+        self.prev_module[self.bn1]=None
         self.activ = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64 * width, layers[0])
@@ -258,10 +264,29 @@ class ResNet(BaseModel):
         self.fc = nn.Linear(512 * block.expansion * width, num_classes)
 
         self.init_weights()
-
-        for l in [self.layer1, self.layer2, self.layer3, self.layer4]:
-            for b in l.children():
-                downs = next(b.downsample.children()) if b.downsample is not None else None
+        if block.name == "BasicBlock":
+            prev = self.bn1
+            for l_block in [self.layer1, self.layer2, self.layer3, self.layer4]:
+                for b in l_block:
+                    self.prev_module[b.bn1] = prev
+                    self.prev_module[b.bn2] = b.bn1
+                    if b.downsample is not None:
+                        self.prev_module[b.downsample[1]] = prev
+                        prev = (b.downsample[1], b.bn2)
+                    else:
+                        prev = (prev, b.bn2)
+        else:
+            prev = self.bn1
+            for l_block in [self.layer1, self.layer2, self.layer3, self.layer4]:
+                for b in l_block:
+                    self.prev_module[b.bn1] = prev
+                    self.prev_module[b.bn2] = b.bn1
+                    self.prev_module[b.bn3] = b.bn2
+                    if b.downsample is not None:
+                        self.prev_module[b.downsample[1]] = prev
+                        prev = (b.downsample[1], b.bn3)
+                    else:
+                        prev = (prev, b.bn3)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -333,6 +358,77 @@ class ResNet(BaseModel):
                         m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
                         m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
         return num_removed
+    def __calc_params(self, a):
+        ans = a[0]*a[1]*9
+        current_loc = 2
+        current_max = a[1]
+        downsample_n = a[2]
+        do_downsample = True if self.width>1 else False
+        for l in self.layers_size:
+            for i in range(l):
+                if do_downsample:
+                    downsample_n = a[current_loc]
+                    ans+=current_max*a[current_loc]
+                    current_loc+=1
+            
+                ans+=current_max*a[current_loc]*9
+                ans+=a[current_loc]*a[current_loc+1]*9
+                if do_downsample:
+                    current_max = max(downsample_n, a[current_loc+1])
+                else:
+                    current_max = max(current_max, a[current_loc+1])
+                do_downsample = False
+                current_loc+=2
+            do_downsample = True
+        return ans + a[-1]*self.num_classes + 2*np.sum(a)
+
+    def __calc_flops(self, a):
+        size = self.insize//2
+        ans=a[0]*a[1]*49*size**2 + a[1]*size**2
+#         print(ans)
+        current_loc = 2
+        current_max = a[1]
+        downsample_n = a[2]
+        size = size//2
+        do_downsample = True if self.width>1 else False
+        for l in self.layers_size:
+            for i in range(l):
+                if do_downsample:
+                    downsample_n = a[current_loc]
+                    size = size//2
+                    ans+=(current_max+1)*a[current_loc]*size**2 
+                    current_loc+=1
+            
+                ans+=current_max*a[current_loc]*9*size**2 + a[current_loc]*size**2
+                ans+=a[current_loc]*a[current_loc+1]*9*size**2 + a[current_loc+1]*size**2
+                if do_downsample:
+                    current_max = max(downsample_n, a[current_loc+1])
+                else:
+                    current_max = max(current_max, a[current_loc+1])
+                do_downsample = False
+                current_loc+=2
+            do_downsample = True
+        return ans #+ (current_max-1)*1000
+
+    def params(self):
+        a = [3]
+        b = [3]
+        for i in self.prunable_modules:
+            a.append(int(i.pruned_zeta.sum()))
+            b.append(len(i.pruned_zeta))
+        return self.__calc_params(a)/self.__calc_params(b)
+                
+
+    def flops(self):
+        a = [3]
+        b = [3]
+        for i in self.prunable_modules:
+            a.append(int(i.pruned_zeta.sum()))
+            b.append(len(i.pruned_zeta))
+#         print(b)
+#         print(self.__calc_flops(b))
+        return self.__calc_flops(a)/self.__calc_flops(b)
+    
 
 
 def make_wide_resnet(num_classes, insize):

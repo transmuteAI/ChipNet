@@ -9,7 +9,6 @@ class BaseModel(nn.Module):
         super(BaseModel, self).__init__()
         self.prunable_modules = []
         self.prev_module = defaultdict()
-#         self.next_module = defaultdict()
         pass
     
     def set_threshold(self, threshold):
@@ -48,9 +47,10 @@ class BaseModel(nn.Module):
     def smoothRound(self, x, steepness=20.):
         return 1./(1.+torch.exp(-1*steepness*(x-0.5)))
     
-    def n_remaining(self, m, steepness=20.):
-        return (m.pruned_zeta if m.is_pruned else self.smoothRound(m.get_zeta_t(), steepness)).sum()
-    
+    def n_remaining(self, m, steepness=20., do_sum=True):
+        rem = (m.pruned_zeta if m.is_pruned else self.smoothRound(m.get_zeta_t(), steepness))
+        return rem.sum() if do_sum else rem
+
     def is_all_pruned(self, m):
         return self.n_remaining(m) == 0
     
@@ -72,13 +72,58 @@ class BaseModel(nn.Module):
                 n_rem += self.n_remaining(l_block, steepness)*prev_remaining*k*k
                 n_total += l_block.num_gates*prev_total*k*k
             elif budget_type == 'flops_ratio':
-                k = l_block._conv_module.kernel_size[0]
-                output_area = l_block._conv_module.output_area
-                prev_total = 3 if self.prev_module[l_block] is None else self.prev_module[l_block].num_gates
-                prev_remaining = 3 if self.prev_module[l_block] is None else self.n_remaining(self.prev_module[l_block], steepness) 
+                k1 = l_block._conv_module.kernel_size[0]
+                k2 = l_block._conv_module.kernel_size[1]
+                active_elements_count = l_block._conv_module.output_area
+                if self.prev_module[l_block] is None:
+                    prev_total = 3
+                    prev_remaining = 3
+                elif isinstance(self.prev_module[l_block], nn.BatchNorm2d):
+                    prev_total = self.prev_module[l_block].num_gates
+                    prev_remaining = self.n_remaining(self.prev_module[l_block], steepness)
+                else:
+                    prev_total = self.prev_module[l_block][-1].num_gates
+                    def cal_max(prev):
+                        if isinstance(prev[0], nn.BatchNorm2d):
+                            prev1 = self.n_remaining(prev[0], steepness, do_sum=False)
+                            prev2 = self.n_remaining(prev[1], steepness, do_sum=False)
+                            return (torch.maximum(prev1, prev2) + torch.maximum(prev2, prev1))/2
+                        prev2 = self.n_remaining(prev[-1], steepness, do_sum=False)
+                        list_ = cal_max(prev[0])
+                        return (torch.maximum(list_, prev2) + torch.maximum(prev2, list_))/2
+
+                    prev_remaining = cal_max(self.prev_module[l_block]).sum()
+
                 curr_remaining = self.n_remaining(l_block, steepness)
-                n_rem += curr_remaining*prev_remaining*k*k*output_area + curr_remaining*output_area
-                n_total += l_block.num_gates*prev_total*k*k*output_area + l_block.num_gates*output_area
+
+                ## Prunned 
+                # conv
+                conv_per_position_flops = k1 * k2 * prev_remaining * curr_remaining
+                n_rem += conv_per_position_flops * active_elements_count
+                if l_block._conv_module.bias is not None:
+                    n_rem += curr_remaining * active_elements_count
+                
+                # bn
+                batch_flops = curr_remaining * active_elements_count
+                n_rem += batch_flops ## ReLU flops
+                if l_block.affine:
+                    batch_flops *= 2
+                n_rem += batch_flops
+                
+                ## normal 
+                # conv
+                conv_per_position_flops = k1 * k2 * prev_total * l_block.num_gates
+                n_total += conv_per_position_flops * active_elements_count
+                if l_block._conv_module.bias is not None:
+                    n_total += l_block.num_gates * active_elements_count
+                
+                # bn
+                batch_flops = l_block.num_gates * active_elements_count
+                n_total += batch_flops ## ReLU flops
+                if l_block.affine:
+                    batch_flops *= 2
+                n_total += batch_flops
+#         print(n_rem, n_total)
         return n_rem/n_total
 
     def give_zetas(self):
@@ -128,7 +173,7 @@ class BaseModel(nn.Module):
                     high = mid-1
                 else:
                     low = mid+1
-        elif budget_type == 'flops_ratio':
+        elif budget_type == 'flops_ratio' and threshold==None:
             zetas = sorted(self.give_zetas())
             high = len(zetas)-1
             low = 0
@@ -138,7 +183,7 @@ class BaseModel(nn.Module):
                 for l_block in self.prunable_modules:
                     l_block.prune(threshold)
                 self.remove_orphans()
-                if self.flops()<Vc:
+                if self.get_remaining(steepness=20., budget_type='flops_ratio')<Vc:
                     high = mid-1
                 else:
                     low = mid+1
@@ -166,7 +211,7 @@ class BaseModel(nn.Module):
         self.device = device
         self(torch.rand(2,3,32,32).to(device))
         threshold = self.prune(budget, budget_type=budget_type, finetuning=True)
-        if budget_type not in ['parameter_ratio', 'flops_ratio']:
+        if budget_type not in ['parameter_ratio']:
             while self.get_remaining(steepness=20., budget_type=budget_type)<budget:
                 threshold-=0.0001
                 self.prune(budget, finetuning=True, budget_type=budget_type, threshold=threshold)
