@@ -1,6 +1,7 @@
 from .resnet import get_resnet_model
 from .network_slimming_resnet import get_network_slimming_model
 from .mobilenet import get_mobilenet
+from .ds_resnet import get_ds_resnet_model
 def get_model(model, method, num_classes, insize):
     """Returns the requested model, ready for training/pruning with the specified method.
 
@@ -12,6 +13,8 @@ def get_model(model, method, num_classes, insize):
 
     if model in ['wrn', 'r50', 'r101','r110', 'r152', 'r32', 'r18', 'r56', 'r20']:
         net = get_resnet_model(model, method, num_classes, insize)
+    elif model in ["dsr18"]:
+        net = get_ds_resnet_model(model, method, num_classes, insize)
     elif model in ['r164']:
         net = get_network_slimming_model(method, num_classes)
     elif model in ['mobilenetv2']:

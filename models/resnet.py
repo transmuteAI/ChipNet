@@ -113,8 +113,9 @@ class ResNetCifar(BaseModel):
                 self.prev_module[b.bn2] = b.bn1
                 if b.downsample is not None:
                     self.prev_module[b.downsample[1]] = prev
-                prev = b.bn2
-                
+                    prev = (b.downsample[1], b.bn2)
+                else:
+                    prev = (prev, b.bn2)               
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -193,32 +194,6 @@ class ResNetCifar(BaseModel):
             do_downsample = True
         return ans + a[-1]*self.num_classes + 2*np.sum(a)
 
-    def __calc_flops(self, a):
-        ans=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
-        current_loc = 2
-        current_max = a[1]
-        downsample_n = a[2]
-        size = self.insize*2
-        do_downsample = True if self.width>1 else False
-        for l in self.layers_size:
-            for i in range(l):
-                if do_downsample:
-                    downsample_n = a[current_loc]
-                    size = size//2
-                    ans+=(current_max+1)*a[current_loc]*size**2 
-                    current_loc+=1
-            
-                ans+=current_max*a[current_loc]*9*size**2 + a[current_loc]*size**2
-                ans+=a[current_loc]*a[current_loc+1]*9*size**2 + a[current_loc+1]*size**2
-                if do_downsample:
-                    current_max = max(downsample_n, a[current_loc+1])
-                else:
-                    current_max = max(current_max, a[current_loc+1])
-                do_downsample = False
-                current_loc+=2
-            do_downsample = True
-        return 2*ans + 2*(current_max-1)*100
-
     def params(self):
         a = [3]
         b = [3]
@@ -226,22 +201,16 @@ class ResNetCifar(BaseModel):
             a.append(int(i.pruned_zeta.sum()))
             b.append(len(i.pruned_zeta))
         return self.__calc_params(a)/self.__calc_params(b)
-                
 
-    def flops(self):
-        a = [3]
-        b = [3]
-        for i in self.prunable_modules:
-            a.append(int(i.pruned_zeta.sum()))
-            b.append(len(i.pruned_zeta))
-        return self.__calc_flops(a)/self.__calc_flops(b)
-    
 class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True, insize=32):
         super(ResNet, self).__init__()
+        self.insize = insize
+        self.width = width
         self.produce_vectors = produce_vectors
         self.block_type = block.__class__.__name__
         self.inplanes = 64
+        self.layers_size = layers
         if insize<128:
             self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         else:
@@ -257,11 +226,32 @@ class ResNet(BaseModel):
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)  # Global Avg Pool
         self.fc = nn.Linear(512 * block.expansion * width, num_classes)
 
+        self.prev_module[self.bn1] = None
         self.init_weights()
-
-        for l in [self.layer1, self.layer2, self.layer3, self.layer4]:
-            for b in l.children():
-                downs = next(b.downsample.children()) if b.downsample is not None else None
+        if self.block_type =="BasicBlock":
+            prev = self.bn1
+            for l_block in [self.layer1 , self.layer2 , self.layer3 , self.layer4]:
+                for b in l_block:
+                    self.prev_module[b.bn1] = prev
+                    self.prev_module[b.bn2] = b.bn1
+                    if b.downsample is not None:
+                        self.prev_module[b.downsample[1]] = prev
+                        prev = (b.downsample[1], b.bn2)
+                    else:
+                        prev = (prev, b.bn2)         
+                    
+        else:
+            prev = self.bn1
+            for l_block in [self.layer1, self.layer2, self.layer3, self.layer4]:
+                for b in l_block:
+                    self.prev_module[b.bn1] = prev
+                    self.prev_module[b.bn2] = b.bn1
+                    self.prev_module[b.bn3] = b.bn2
+                    if b.downsample is not None:
+                        self.prev_module[b.downsample[1]] = prev
+                        prev = (b.downsample[1], b.bn3)
+                    else:
+                        prev = (prev, b.bn3)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -333,7 +323,6 @@ class ResNet(BaseModel):
                         m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
                         m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
         return num_removed
-
 
 def make_wide_resnet(num_classes, insize):
     model = ResNetCifar(BasicBlock, [4, 4, 4], width=12, num_classes=num_classes, insize=insize)
