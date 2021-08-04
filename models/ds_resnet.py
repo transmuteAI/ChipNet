@@ -95,7 +95,7 @@ class ResNet(BaseModel):
         self.insize=insize
         self.width = width
         self.produce_vectors = produce_vectors
-        self.block_type = block.__class__.__name__
+        self.block_type = block.__name__
         self.inplanes = 64
         self.layers_size = layers
         if insize<128:
