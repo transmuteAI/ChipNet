@@ -50,7 +50,6 @@ class BasicBlock(nn.Module):
 
 # class Bottleneck(nn.Module):
 #     expansion = 4
-#     name = "Bottleneck"
 
 #     def __init__(self, inplanes, planes, stride=1, downsample=None):
 #         super(Bottleneck, self).__init__()
@@ -117,7 +116,7 @@ class ResNet(BaseModel):
 
         self.init_weights()
 
-        if block.name =="BasicBlock":
+        if self.block_type =="BasicBlock":
             prev = self.bn1
             for l_block in [self.layer1 , self.layer2 , self.layer3 , self.layer4]:
                 for b in l_block:
