@@ -182,7 +182,7 @@ class BaseModel(nn.Module):
                 for l_block in self.prunable_modules:
                     l_block.prune(threshold)
                 self.remove_orphans()
-                if self.get_remaining(steepness=20., budget_type='flops_ratio')<Vc:
+                if self.get_remaining(steepness=20., budget_type='flops_ratio')<Vc.item():
                     high = mid-1
                 else:
                     low = mid+1
