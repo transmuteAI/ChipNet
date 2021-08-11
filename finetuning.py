@@ -133,6 +133,9 @@ num_epochs = args.epochs
 train_losses = []
 valid_losses = []
 valid_accuracy = []
+name = f'{args.name}_{args.dataset}_finetuned'
+if args.label_smoothing>0:
+    name += '_label_smoothing' 
 if args.test_only == False:
     for epoch in range(num_epochs):
         adjust_learning_rate(optimizer, epoch, args)
@@ -149,16 +152,16 @@ if args.test_only == False:
                 "state_dict" : model.state_dict(),
                 "acc" : best_accuracy,
                 "rem" : remaining,
-            }, f"checkpoints/{args.name}_{args.dataset}_finetuned.pth")
+            }, f"checkpoints/{name}.pth")
             
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
         valid_accuracy.append(accuracy)
         df_data=np.array([train_losses, valid_losses, valid_accuracy]).T
         df = pd.DataFrame(df_data,columns = ['train_losses','valid_losses','valid_accuracy'])
-        df.to_csv(f"logs/{args.name}_{args.dataset}_finetuned.csv")
+        df.to_csv(f"logs/{name}.csv")
 
-state = torch.load(f"checkpoints/{args.name}_{args.dataset}_finetuned.pth")
+state = torch.load(f"checkpoints/{name}.pth")
 model.load_state_dict(state['state_dict'],strict=True)
 acc, v_loss = test(model, criterion_test, optimizer, "test")
 print(f"Test Accuracy: {acc} | Valid Accuracy: {state['acc']}")
