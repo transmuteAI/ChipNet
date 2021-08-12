@@ -239,6 +239,9 @@ class ResNetCifar(BaseModel):
 class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True, insize=32):
         super(ResNet, self).__init__()
+        self.layers_size = layers
+        self.num_classes = num_classes
+        self.insize = insize
         self.produce_vectors = produce_vectors
         self.block_type = block.__class__.__name__
         self.inplanes = 64
@@ -333,6 +336,39 @@ class ResNet(BaseModel):
                         m1.pruned_zeta.data.copy_(torch.zeros_like(m1.pruned_zeta))
                         m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
         return num_removed
+    
+    def __calc_params(self, a):
+        ans = a[0]*a[1]*9
+        current_loc = 2
+        current_max = a[1]
+        downsample_n = a[2]
+        do_downsample = True
+        for l in self.layers_size:
+            for i in range(l):
+                if do_downsample:
+                    downsample_n = a[current_loc]
+                    ans+=current_max*a[current_loc]
+                    current_loc+=1
+            
+                ans+=current_max*a[current_loc]*1
+                ans+=a[current_loc]*a[current_loc+1]*9
+                ans+=a[current_loc+1]*a[current_loc+2]*1
+                if do_downsample:
+                    current_max = max(downsample_n, a[current_loc+2])
+                else:
+                    current_max = max(current_max, a[current_loc+2])
+                do_downsample = False
+                current_loc+=3
+            do_downsample = True
+        return ans + a[-1]*self.num_classes + 2*np.sum(a)
+
+    def params(self):
+        a = [3]
+        b = [3]
+        for i in self.prunable_modules:
+            a.append(int(i.pruned_zeta.sum()))
+            b.append(len(i.pruned_zeta))
+        return self.__calc_params(a)/self.__calc_params(b)
 
 
 def make_wide_resnet(num_classes, insize):
