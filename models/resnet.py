@@ -370,7 +370,7 @@ class ResNet(BaseModel):
             b.append(len(i.pruned_zeta))
         return self.calc_params(a)/self.calc_params(b)
     
-    def calc_flops(a):
+    def calc_flops(self, a):
         ans=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
         current_loc = 2
         current_max = a[1]
