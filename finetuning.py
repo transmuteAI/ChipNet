@@ -30,6 +30,8 @@ ap.add_argument('--decay', '-d', type=float, default=0.001, help='weight decay')
 ap.add_argument('--test_only', '-t', type=bool, default=False, help='test the best model')
 ap.add_argument('--workers', default=0, type=int, help='number of workers')
 ap.add_argument('--cuda_id', '-id', type=str, default='0', help='gpu number')
+ap.add_argument('--label_smoothing', '-ls', type=float, default=0, help='set label smoothing')
+
 args = ap.parse_args()
 
 valid_size=args.valid_size
@@ -58,9 +60,21 @@ else:
     state = torch.load(model_path)['state_dict']
     model.load_state_dict(state, strict=False)
 CE = nn.CrossEntropyLoss()
-def criterion(model, y_pred, y_true):
+def criterion_test(model, y_pred, y_true):
     ce_loss = CE(y_pred, y_true)
     return ce_loss
+
+if args.label_smoothing>0:
+    CE_smooth = CrossEntropyLabelSmooth(data_object.num_classes , args.label_smoothing)
+    def criterion_train(model, y_pred, y_true):
+        ce_loss = CE_smooth(y_pred, y_true)
+        return ce_loss
+else:
+    def criterion_train(model, y_pred, y_true):
+        ce_loss = CE(y_pred, y_true)
+        return ce_loss
+
+
 
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.decay)
 device = torch.device(f"cuda:{str(args.cuda_id)}")
@@ -119,12 +133,15 @@ num_epochs = args.epochs
 train_losses = []
 valid_losses = []
 valid_accuracy = []
+name = f'{args.name}_{args.dataset}_finetuned'
+if args.label_smoothing>0:
+    name += '_label_smoothing' 
 if args.test_only == False:
     for epoch in range(num_epochs):
         adjust_learning_rate(optimizer, epoch, args)
         print('Starting epoch %d / %d' % (epoch + 1, num_epochs))
-        train_loss = train(model, criterion, optimizer)
-        accuracy, valid_loss = test(model, criterion, optimizer, "val")
+        train_loss = train(model, criterion_train, optimizer)
+        accuracy, valid_loss = test(model, criterion_test, optimizer, "val")
         remaining = model.get_remaining(20.,args.budget_type).item()
         
         if accuracy>best_accuracy:
@@ -135,16 +152,16 @@ if args.test_only == False:
                 "state_dict" : model.state_dict(),
                 "acc" : best_accuracy,
                 "rem" : remaining,
-            }, f"checkpoints/{args.name}_{args.dataset}_finetuned.pth")
+            }, f"checkpoints/{name}.pth")
             
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
         valid_accuracy.append(accuracy)
         df_data=np.array([train_losses, valid_losses, valid_accuracy]).T
         df = pd.DataFrame(df_data,columns = ['train_losses','valid_losses','valid_accuracy'])
-        df.to_csv(f"logs/{args.name}_{args.dataset}_finetuned.csv")
+        df.to_csv(f"logs/{name}.csv")
 
-state = torch.load(f"checkpoints/{args.name}_{args.dataset}_finetuned.pth")
+state = torch.load(f"checkpoints/{name}.pth")
 model.load_state_dict(state['state_dict'],strict=True)
-acc, v_loss = test(model, criterion, optimizer, "test")
+acc, v_loss = test(model, criterion_test, optimizer, "test")
 print(f"Test Accuracy: {acc} | Valid Accuracy: {state['acc']}")
