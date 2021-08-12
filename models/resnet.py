@@ -169,7 +169,7 @@ class ResNetCifar(BaseModel):
                     m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
         return num_removed
 
-    def __calc_params(self, a):
+    def calc_params(self, a):
         ans = a[0]*a[1]*9
         current_loc = 2
         current_max = a[1]
@@ -193,7 +193,7 @@ class ResNetCifar(BaseModel):
             do_downsample = True
         return ans + a[-1]*self.num_classes + 2*np.sum(a)
 
-    def __calc_flops(self, a):
+    def calc_flops(self, a):
         ans=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
         current_loc = 2
         current_max = a[1]
@@ -225,7 +225,7 @@ class ResNetCifar(BaseModel):
         for i in self.prunable_modules:
             a.append(int(i.pruned_zeta.sum()))
             b.append(len(i.pruned_zeta))
-        return self.__calc_params(a)/self.__calc_params(b)
+        return self.calc_params(a)/self.calc_params(b)
                 
 
     def flops(self):
@@ -234,7 +234,7 @@ class ResNetCifar(BaseModel):
         for i in self.prunable_modules:
             a.append(int(i.pruned_zeta.sum()))
             b.append(len(i.pruned_zeta))
-        return self.__calc_flops(a)/self.__calc_flops(b)
+        return self.calc_flops(a)/self.calc_flops(b)
     
 class ResNet(BaseModel):
     def __init__(self, block, layers, width=1, num_classes=1000, produce_vectors=False, init_weights=True, insize=32):
@@ -337,7 +337,7 @@ class ResNet(BaseModel):
                         m2.pruned_zeta.data.copy_(torch.zeros_like(m2.pruned_zeta))
         return num_removed
     
-    def __calc_params(self, a):
+    def calc_params(self, a):
         ans = a[0]*a[1]*9
         current_loc = 2
         current_max = a[1]
@@ -368,7 +368,7 @@ class ResNet(BaseModel):
         for i in self.prunable_modules:
             a.append(int(i.pruned_zeta.sum()))
             b.append(len(i.pruned_zeta))
-        return self.__calc_params(a)/self.__calc_params(b)
+        return self.calc_params(a)/self.calc_params(b)
 
 
 def make_wide_resnet(num_classes, insize):
