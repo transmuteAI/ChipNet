@@ -90,14 +90,14 @@ def visualize_model_architecture(model, budget, budget_type):
     print(full_model)
     print(pruned_model)
     plt.show()
-    if hasattr(model, '__calc_params') and budget_type!=parameter_ratio:
-        total_params = model.__calc_params(full_model)
-        active_params = model.__calc_params(pruned_model)
+    if hasattr(model, 'calc_params') and budget_type!=parameter_ratio:
+        total_params = model.calc_params(full_model)
+        active_params = model.calc_params(pruned_model)
     else:
         active_params, total_params = model.get_params_count()
-    if hasattr(model, '__calc_flops') and budget_type!=flops_ratio:
-        total_flops = model.__calc_flops(full_model)
-        active_flops = model.__calc_flops(pruned_model)
+    if hasattr(model, 'calc_flops') and budget_type!=flops_ratio:
+        total_flops = model.calc_flops(full_model)
+        active_flops = model.calc_flops(pruned_model)
     else:
         active_flops, total_flops = model.get_flops()
     active_volume, total_volume = model.get_volume()
