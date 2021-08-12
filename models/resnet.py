@@ -369,6 +369,41 @@ class ResNet(BaseModel):
             a.append(int(i.pruned_zeta.sum()))
             b.append(len(i.pruned_zeta))
         return self.calc_params(a)/self.calc_params(b)
+    
+    def calc_flops(a):
+        ans=a[0]*a[1]*9*self.insize**2 + a[1]*self.insize**2
+        current_loc = 2
+        current_max = a[1]
+        downsample_n = a[2]
+        size = self.insize*2
+        do_downsample = True
+        for l in self.layers_size:
+            for i in range(l):
+                if do_downsample:
+                    downsample_n = a[current_loc]
+                    size = size//2
+                    ans+=(current_max+1)*a[current_loc]*size**2 
+                    current_loc+=1
+
+                ans+=current_max*a[current_loc]*1*size**2 + a[current_loc]*size**2
+                ans+=a[current_loc]*a[current_loc+1]*9*size**2 + a[current_loc+1]*size**2
+                ans+=a[current_loc+1]*a[current_loc+2]*1*size**2 + a[current_loc+2]*size**2
+                if do_downsample:
+                    current_max = max(downsample_n, a[current_loc+2])
+                else:
+                    current_max = max(current_max, a[current_loc+2])
+                do_downsample = False
+                current_loc+=3
+            do_downsample = True
+        return 2*ans + 2*(current_max-1)*100
+    
+    def flops(self):
+        a = [3]
+        b = [3]
+        for i in self.prunable_modules:
+            a.append(int(i.pruned_zeta.sum()))
+            b.append(len(i.pruned_zeta))
+        return self.calc_flops(a)/self.calc_flops(b)
 
 
 def make_wide_resnet(num_classes, insize):
