@@ -105,13 +105,14 @@ class ResNet(BaseModel):
         self.bn1 = nn.BatchNorm2d(64)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
         self.prev_module[self.bn1]=None
-        self.activ = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        # self.activ = nn.ReLU(inplace=True)
+        # self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64 * width, layers[0])
         self.layer2 = self._make_layer(block, 128 * width, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256 * width, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512 * width, layers[3], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)  # Global Avg Pool
+        self.avgpool = nn.AdaptiveAvgPool2d(output_size=1)  # Global Avg Pool4
+        self.bn2 = nn.BatchNorm1d(512 * block.expansion * width)
         self.fc = nn.Linear(512 * block.expansion * width, num_classes)
 
         self.init_weights()
@@ -128,7 +129,7 @@ class ResNet(BaseModel):
                         prev = (prev ,b.bn1)
                     self.prev_module[b.bn2] = prev
                     prev = (prev , b.bn2)
-                    
+
         else:
             raise ValueError("Only BasicBlock supported")        
         #     prev = self.bn1
@@ -164,8 +165,8 @@ class ResNet(BaseModel):
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
-        x = self.activ(x)
-        x = self.maxpool(x)
+        # x = self.activ(x)
+        # x = self.maxpool(x)
 
         x = self.layer1(x)
         x = self.layer2(x)
@@ -174,7 +175,8 @@ class ResNet(BaseModel):
 
         x = self.avgpool(x)
         feature_vectors = x.view(x.size(0), -1)
-        x = self.fc(feature_vectors)
+        x = self.bn2(feature_vectors)
+        x = self.fc(x)
 
         if self.produce_vectors:
             return x, feature_vectors
