@@ -251,6 +251,7 @@ class ResNet(BaseModel):
             self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.conv1, self.bn1 = ModuleInjection.make_prunable(self.conv1, self.bn1)
+        self.prev_module[self.bn1]=None
         self.activ = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64 * width, layers[0])
@@ -261,8 +262,15 @@ class ResNet(BaseModel):
         self.fc = nn.Linear(512 * block.expansion * width, num_classes)
 
         self.init_weights()
-
+        prev = self.bn1
         for l in [self.layer1, self.layer2, self.layer3, self.layer4]:
+            for b in l:
+                self.prev_module[b.bn1] = prev
+                self.prev_module[b.bn2] = b.bn1
+                self.prev_module[b.bn3] = b.bn2
+                if b.downsample is not None:
+                    self.prev_module[b.downsample[1]] = prev
+                prev = b.bn3
             for b in l.children():
                 downs = next(b.downsample.children()) if b.downsample is not None else None
 
